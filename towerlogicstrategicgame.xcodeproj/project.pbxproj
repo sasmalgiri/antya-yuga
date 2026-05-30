@@ -6,8 +6,27 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		B4683D6F2FCB6F35001DD3D8 /* BazaarStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4683D6E2FCB6F35001DD3D8 /* BazaarStore.swift */; };
+		B4683D712FCB9048001DD3D8 /* StoreManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4683D702FCB9048001DD3D8 /* StoreManager.swift */; };
+		B473567E2FC2E22C0041FC4F /* GameViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B473567D2FC2E22C0041FC4F /* GameViewModel.swift */; };
+		B47356802FC36D930041FC4F /* SoundEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B473567F2FC36D930041FC4F /* SoundEngine.swift */; };
+		B47356822FC36ECA0041FC4F /* GameArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47356812FC36ECA0041FC4F /* GameArt.swift */; };
+		B47356842FC381E40041FC4F /* TowerVisuals.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47356832FC381E40041FC4F /* TowerVisuals.swift */; };
+		B47356862FC3CC100041FC4F /* AssetAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47356852FC3CC100041FC4F /* AssetAdapter.swift */; };
+		B4735A572FC5E4C10041FC4F /* AstraCodex.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4735A562FC5E4C10041FC4F /* AstraCodex.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		B4683D6E2FCB6F35001DD3D8 /* BazaarStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BazaarStore.swift; sourceTree = "<group>"; };
+		B4683D702FCB9048001DD3D8 /* StoreManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreManager.swift; sourceTree = "<group>"; };
 		B473566D2FC2DD8D0041FC4F /* towerlogicstrategicgame.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = towerlogicstrategicgame.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B473567D2FC2E22C0041FC4F /* GameViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameViewModel.swift; sourceTree = "<group>"; };
+		B473567F2FC36D930041FC4F /* SoundEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundEngine.swift; sourceTree = "<group>"; };
+		B47356812FC36ECA0041FC4F /* GameArt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameArt.swift; sourceTree = "<group>"; };
+		B47356832FC381E40041FC4F /* TowerVisuals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TowerVisuals.swift; sourceTree = "<group>"; };
+		B47356852FC3CC100041FC4F /* AssetAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetAdapter.swift; sourceTree = "<group>"; };
+		B4735A562FC5E4C10041FC4F /* AstraCodex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AstraCodex.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -34,6 +53,14 @@
 			children = (
 				B473566F2FC2DD8D0041FC4F /* towerlogicstrategicgame */,
 				B473566E2FC2DD8D0041FC4F /* Products */,
+				B473567D2FC2E22C0041FC4F /* GameViewModel.swift */,
+				B473567F2FC36D930041FC4F /* SoundEngine.swift */,
+				B47356812FC36ECA0041FC4F /* GameArt.swift */,
+				B47356832FC381E40041FC4F /* TowerVisuals.swift */,
+				B47356852FC3CC100041FC4F /* AssetAdapter.swift */,
+				B4735A562FC5E4C10041FC4F /* AstraCodex.swift */,
+				B4683D6E2FCB6F35001DD3D8 /* BazaarStore.swift */,
+				B4683D702FCB9048001DD3D8 /* StoreManager.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -119,6 +146,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B4735A572FC5E4C10041FC4F /* AstraCodex.swift in Sources */,
+				B47356862FC3CC100041FC4F /* AssetAdapter.swift in Sources */,
+				B473567E2FC2E22C0041FC4F /* GameViewModel.swift in Sources */,
+				B47356842FC381E40041FC4F /* TowerVisuals.swift in Sources */,
+				B47356802FC36D930041FC4F /* SoundEngine.swift in Sources */,
+				B47356822FC36ECA0041FC4F /* GameArt.swift in Sources */,
+				B4683D712FCB9048001DD3D8 /* StoreManager.swift in Sources */,
+				B4683D6F2FCB6F35001DD3D8 /* BazaarStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -255,6 +290,8 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "tower logic strategic game";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.strategy-games";
 				INFOPLIST_KEY_NSCameraUsageDescription = CAMERA_USAGE_DESCRIPTION;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -302,6 +339,8 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "tower logic strategic game";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.strategy-games";
 				INFOPLIST_KEY_NSCameraUsageDescription = CAMERA_USAGE_DESCRIPTION;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
