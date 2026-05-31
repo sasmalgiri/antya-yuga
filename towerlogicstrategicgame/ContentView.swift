@@ -1314,6 +1314,19 @@ struct GameOverOverlay: View {
                             .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
+
+                    Button {
+                        exit(0)
+                    } label: {
+                        Text("Exit")
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 10)
+                            .background(Color(red: 0.55, green: 0.10, blue: 0.10))
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
                 }
             }
             .padding(22)
