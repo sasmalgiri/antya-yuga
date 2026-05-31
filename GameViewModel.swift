@@ -2854,6 +2854,8 @@ final class GameViewModel {
     /// deduction in that case).
     @discardableResult
     private func payPoints(_ cost: Int) -> Bool {
+        // Defensive: zero is a no-op; negative would be a refund bug.
+        guard cost > 0 else { return cost == 0 }
         guard availablePoints >= cost else { return false }
         let fromRun = min(points, cost)
         points -= fromRun
