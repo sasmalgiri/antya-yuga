@@ -2044,15 +2044,27 @@ final class GameViewModel {
         let total = weights.reduce(0, +)
         var picks: [EnemyKind] = []
         picks.reserveCapacity(count)
+        // Guard: `Double.random(in: 0..<x)` requires x > 0. Weights are always
+        // positive (1/(stock+25)) so total is always positive in practice, but
+        // we defend against a future change that could zero them out.
+        guard total > 0 else {
+            for _ in 0..<count { picks.append(table.randomElement()!.kind) }
+            return picks
+        }
         for _ in 0..<count {
             var r = Double.random(in: 0..<total)
+            var picked = false
             for (i, w) in weights.enumerated() {
                 r -= w
                 if r <= 0 {
                     picks.append(table[i].kind)
+                    picked = true
                     break
                 }
             }
+            // Floating-point safety net: if rounding ate the remainder,
+            // fall back to the last (highest-cumulative) bearer.
+            if !picked { picks.append(table.last!.kind) }
         }
         return picks
     }

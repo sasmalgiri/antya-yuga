@@ -86,7 +86,12 @@ final class SoundEngine: @unchecked Sendable {
 
     func setMuted(_ muted: Bool) {
         isMuted = muted
-        if muted { speech.stopSpeaking(at: .immediate) }
+        if muted {
+            let synth = self.speech
+            DispatchQueue.global(qos: .userInitiated).async {
+                synth.stopSpeaking(at: .immediate)
+            }
+        }
     }
 
     func toggleMute() {
@@ -197,9 +202,13 @@ final class SoundEngine: @unchecked Sendable {
             utt.pitchMultiplier = 1.0
             utt.volume = 0.85
         }
-        // Stop any pending utterance so we don't pile them up.
-        if speech.isSpeaking { speech.stopSpeaking(at: .word) }
-        speech.speak(utt)
+        // The 4-second cooldown above already prevents pile-up. Speaking is
+        // dispatched off the main thread to avoid priority-inversion when
+        // AVSpeechSynthesizer's internal worker is at default QoS.
+        let synth = self.speech
+        DispatchQueue.global(qos: .userInitiated).async {
+            synth.speak(utt)
+        }
     }
 
     /// Pool of Sanskrit slokas per event — short, ~3-6 syllables so they

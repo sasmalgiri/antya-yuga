@@ -1947,6 +1947,9 @@ struct AmritaKalashButton: View {
             }
         }
         .buttonStyle(.plain)
+        // Once tapped, the 250 ms consume animation is in flight — disable
+        // the button so a quick second tap can't double-spend 10 000 points.
+        .disabled(consumed)
         .onAppear {
             withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
                 glow = 1
