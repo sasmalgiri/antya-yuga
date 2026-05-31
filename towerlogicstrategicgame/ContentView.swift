@@ -1268,7 +1268,6 @@ struct AgeBanner: View {
 
 struct GameOverOverlay: View {
     let vm: GameViewModel
-    @State private var showBazaar = false
 
     var body: some View {
         ZStack {
@@ -1288,8 +1287,6 @@ struct GameOverOverlay: View {
                 }
                 .font(.system(size: 13, design: .rounded))
                 .foregroundColor(.white)
-
-                BazaarButton(vm: vm, presented: $showBazaar)
 
                 HStack(spacing: 10) {
                     Button {
@@ -1328,10 +1325,6 @@ struct GameOverOverlay: View {
                             .stroke(Color.red.opacity(0.4), lineWidth: 1)
                     )
             )
-
-            if showBazaar {
-                BazaarOverlay(vm: vm, presented: $showBazaar)
-            }
         }
     }
 }
