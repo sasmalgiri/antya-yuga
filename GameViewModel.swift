@@ -2812,9 +2812,9 @@ final class GameViewModel {
     // MARK: - Amrita Kalash (life-revival relic)
 
     /// Threshold of available points needed for the Amrita Kalash to appear / be used.
-    static let amritaKalashCost = 5000
+    static let amritaKalashCost = 4000
     /// Lives restored when the Kalash is consumed.
-    static let amritaKalashLifeGain = 25
+    static let amritaKalashLifeGain = 40
 
     var canUseAmritaKalash: Bool { availablePoints >= Self.amritaKalashCost }
 
