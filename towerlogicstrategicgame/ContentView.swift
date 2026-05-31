@@ -202,10 +202,22 @@ struct RaceSelectionView: View {
 
     private func raceCard(_ race: Race) -> some View {
         VStack(spacing: 6) {
+            // Beginner-friendly badge — only on Sen and Pal.
+            if race.isBeginnerFriendly {
+                Text("RECOMMENDED FOR BEGINNERS")
+                    .font(.system(size: 8, weight: .heavy, design: .rounded))
+                    .foregroundColor(.green)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(Color.green.opacity(0.18)))
+                    .overlay(Capsule().stroke(Color.green.opacity(0.6), lineWidth: 0.7))
+                    .padding(.top, 6)
+            }
+
             Image(systemName: race.symbol)
                 .font(.system(size: 30))
                 .foregroundColor(race.color)
-                .padding(.top, 8)
+                .padding(.top, race.isBeginnerFriendly ? 0 : 8)
 
             Text(race.displayName)
                 .font(.system(size: 16, weight: .heavy, design: .rounded))
@@ -246,8 +258,13 @@ struct RaceSelectionView: View {
                 .fill(Color.black.opacity(0.6))
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)
-                        .stroke(race.color.opacity(0.7), lineWidth: 1.5)
+                        .stroke(race.isBeginnerFriendly
+                                ? Color.green.opacity(0.85)
+                                : race.color.opacity(0.7),
+                                lineWidth: race.isBeginnerFriendly ? 2.0 : 1.5)
                 )
+                .shadow(color: race.isBeginnerFriendly ? .green.opacity(0.35) : .clear,
+                        radius: race.isBeginnerFriendly ? 6 : 0)
         )
     }
 }

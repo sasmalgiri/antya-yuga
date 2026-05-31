@@ -212,12 +212,28 @@ enum Race: String, CaseIterable, Identifiable {
         case .gupta:       return Resources(gold: 200, metal: 15, tech: 35, jotisha: 10, veda: 5)
         case .pratihara:   return Resources(gold: 260, metal: 20, tech: 0,  jotisha: 10, veda: 0)
         case .rashtrakuta: return Resources(gold: 200, metal: 35, tech: 10, jotisha: 10, veda: 5)
-        case .pal:         return Resources(gold: 220, metal: 15, tech: 15, jotisha: 35, veda: 8)
+        // Pal — the wealthy patron, a beginner-friendly start.
+        case .pal:         return Resources(gold: 360, metal: 25, tech: 25, jotisha: 45, veda: 15)
         case .chola:       return Resources(gold: 250, metal: 20, tech: 0,  jotisha: 10, veda: 0)
-        case .sen:         return Resources(gold: 190, metal: 15, tech: 25, jotisha: 10, veda: 0)
+        // Sen — the scholar's all-rounder, also tuned for new players.
+        case .sen:         return Resources(gold: 260, metal: 25, tech: 35, jotisha: 20, veda: 10)
         case .ahom:        return Resources(gold: 200, metal: 20, tech: 0,  jotisha: 10, veda: 25)
         }
     }
+
+    /// Race-specific bonus starting lives — beginner-friendly cushion for the
+    /// patron / scholar races. Stacks with BazaarStore.bonusStartingLives.
+    var bonusStartingLives: Int {
+        switch self {
+        case .sen:  return 5
+        case .pal:  return 3
+        default:    return 0
+        }
+    }
+
+    /// Marks races that the race-select screen highlights with a green
+    /// "Beginner-friendly" badge.
+    var isBeginnerFriendly: Bool { self == .sen || self == .pal }
 
     var damageMultiplier: Double {
         switch self {
@@ -1617,7 +1633,7 @@ final class GameViewModel {
     func selectRace(_ race: Race) {
         self.race = race
         stock = race.startingResources
-        lives = 18 + BazaarStore.shared.bonusStartingLives
+        lives = 18 + BazaarStore.shared.bonusStartingLives + race.bonusStartingLives
         activeBazaarPerks.removeAll()
         points = 0
         // Defensive: reset any lingering endgame state from a previous run
@@ -3206,7 +3222,7 @@ final class GameViewModel {
         } else {
             stock = Resources()
         }
-        lives = 18 + BazaarStore.shared.bonusStartingLives
+        lives = 18 + BazaarStore.shared.bonusStartingLives + (race?.bonusStartingLives ?? 0)
         activeBazaarPerks.removeAll()
         points = 0
         score = 0
