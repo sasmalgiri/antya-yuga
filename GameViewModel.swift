@@ -2570,6 +2570,8 @@ final class GameViewModel {
                 pointGain += ptReward
                 // Bonus resource drop (resource bearers reward big)
                 drops = drops + e.kind.resourceDrop
+                // Kind-specific death sound; bosses also trigger a victory sloka.
+                SoundEngine.shared.playEnemyDeath(kind: e.kind)
             }
         }
         if lifeLoss > 0 { lives -= lifeLoss }
@@ -2599,6 +2601,7 @@ final class GameViewModel {
         for i in towers.indices {
             towers[i].hp = towers[i].maxHP
         }
+        SoundEngine.shared.playWaveClear()
     }
 
     private func checkGameOver() {
@@ -2638,6 +2641,7 @@ final class GameViewModel {
     func useAmritaKalash() -> Bool {
         guard payPoints(Self.amritaKalashCost) else { return false }
         lives += Self.amritaKalashLifeGain
+        SoundEngine.shared.playAmritaKalash()
         return true
     }
 
