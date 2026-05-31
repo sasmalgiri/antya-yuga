@@ -44,6 +44,14 @@ struct ContentView: View {
                 BottomBar(vm: vm)
             }
 
+            // Amrita Kalash — appears in top-middle once the player can afford it.
+            if vm.canUseAmritaKalash && !vm.isGameOver {
+                AmritaKalashButton(vm: vm)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .padding(.top, 80)
+                    .transition(.scale.combined(with: .opacity))
+            }
+
             if let slotIndex = vm.selectedSlotIndex {
                 BuildMenu(vm: vm, slotIndex: slotIndex)
                     .padding(.bottom, 80)
@@ -268,15 +276,20 @@ struct GameField: View {
 
             // Towers
             ForEach(vm.towers) { tower in
-                TowerView(tower: tower, selected: vm.selectedTowerID == tower.id)
-                    .position(tower.position)
-                    .onTapGesture {
-                        withAnimation(.easeOut(duration: 0.15)) {
-                            vm.selectedTowerID = tower.id
-                            vm.selectedBuildingID = nil
-                            vm.selectedSlotIndex = nil
-                        }
+                TowerView(
+                    tower: tower,
+                    selected: vm.selectedTowerID == tower.id,
+                    isProtected: vm.protectedTowerIDs.contains(tower.id),
+                    isBeingHealed: vm.healedTowerIDs.contains(tower.id)
+                )
+                .position(tower.position)
+                .onTapGesture {
+                    withAnimation(.easeOut(duration: 0.15)) {
+                        vm.selectedTowerID = tower.id
+                        vm.selectedBuildingID = nil
+                        vm.selectedSlotIndex = nil
                     }
+                }
             }
 
             ForEach(vm.fireFlashes) { flash in
@@ -290,6 +303,16 @@ struct GameField: View {
                 ProjectileArtView(projectile: p)
                     .position(p.position)
                     .allowsHitTesting(false)
+            }
+
+            // Boss-attack bolts — drawn after projectiles so they read
+            // clearly on top of the field.
+            ForEach(vm.bossAttackFlashes) { flash in
+                BossAttackBoltView(
+                    flash: flash,
+                    progress: flash.age / BossAttackFlash.lifetime
+                )
+                .allowsHitTesting(false)
             }
 
             ForEach(vm.enemies) { enemy in
@@ -339,9 +362,114 @@ struct BuildSlotView: View {
 struct TowerView: View {
     let tower: Tower
     let selected: Bool
+    var isProtected: Bool = false
+    var isBeingHealed: Bool = false
+
+    @State private var pulse: Double = 0
 
     var body: some View {
-        TowerArtView(tower: tower, selected: selected)
+        ZStack {
+            // Stone aura (always-on faint colored ring while a stone is socketed)
+            if let stone = tower.stone {
+                Circle()
+                    .stroke(stone.kind.color.opacity(0.35), lineWidth: 1.5)
+                    .frame(width: 84, height: 84)
+                    .shadow(color: stone.kind.color.opacity(0.55), radius: 5)
+            }
+
+            // Shield shimmer (Lakshman/Suraksha/Vajra Kavach barrier coverage)
+            if isProtected {
+                Circle()
+                    .stroke(
+                        AngularGradient(colors: [
+                            Color.cyan.opacity(0.0),
+                            Color.cyan.opacity(0.85),
+                            Color.white.opacity(0.9),
+                            Color.cyan.opacity(0.85),
+                            Color.cyan.opacity(0.0)
+                        ], center: .center, angle: .degrees(pulse * 360)),
+                        style: StrokeStyle(lineWidth: 2.0, dash: [5, 4])
+                    )
+                    .frame(width: 92, height: 92)
+                    .shadow(color: .cyan.opacity(0.6), radius: 4)
+            }
+
+            // Heal pulse (Aushadhi/Sanjivani/Amrit aura)
+            if isBeingHealed {
+                Circle()
+                    .stroke(Color.green.opacity(0.85 - 0.55 * pulse), lineWidth: 2)
+                    .frame(width: 76 + 24 * pulse, height: 76 + 24 * pulse)
+                ForEach(0..<4, id: \.self) { i in
+                    Image(systemName: "plus")
+                        .font(.system(size: 10, weight: .heavy))
+                        .foregroundColor(.green.opacity(0.85))
+                        .offset(x: cos(Double(i) * .pi / 2 + pulse * .pi * 2) * 32,
+                                y: sin(Double(i) * .pi / 2 + pulse * .pi * 2) * 32 - pulse * 18)
+                        .opacity(1.0 - pulse)
+                }
+            }
+
+            TowerArtView(tower: tower, selected: selected)
+        }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.3).repeatForever(autoreverses: false)) {
+                pulse = 1
+            }
+        }
+    }
+}
+
+// MARK: - Boss attack bolt (jagged red line from boss to a hit tower)
+
+struct BossAttackBoltView: View {
+    let flash: BossAttackFlash
+    let progress: Double  // 0..1
+
+    var body: some View {
+        let alpha = 1.0 - progress
+        Path { p in
+            // Build a jagged segmented line between from→to with offsets
+            let from = flash.from
+            let to = flash.to
+            let dx = to.x - from.x
+            let dy = to.y - from.y
+            let dist = max(1, hypot(dx, dy))
+            let nx = -dy / dist
+            let ny = dx / dist
+            let segments = 6
+            var pts: [CGPoint] = [from]
+            for i in 1..<segments {
+                let t = CGFloat(i) / CGFloat(segments)
+                let cx = from.x + dx * t
+                let cy = from.y + dy * t
+                // Pseudo-random jitter for jagged look (deterministic per flash)
+                let seed = (flash.id.hashValue &+ i) & 0xFF
+                let jitter = (CGFloat(seed) / 255.0 - 0.5) * 18
+                pts.append(CGPoint(x: cx + nx * jitter, y: cy + ny * jitter))
+            }
+            pts.append(to)
+            p.move(to: pts[0])
+            for q in pts.dropFirst() { p.addLine(to: q) }
+        }
+        .stroke(flash.color.opacity(0.85 * alpha), style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
+        .shadow(color: flash.color.opacity(0.9 * alpha), radius: 5)
+        .overlay(
+            Path { p in
+                p.move(to: flash.from)
+                p.addLine(to: flash.to)
+            }
+            .stroke(Color.white.opacity(0.85 * alpha), lineWidth: 1.2)
+        )
+        // Tower-end impact star
+        .overlay(
+            Image(systemName: "burst.fill")
+                .font(.system(size: 18, weight: .heavy))
+                .foregroundColor(.white.opacity(alpha))
+                .shadow(color: flash.color, radius: 6)
+                .position(flash.to)
+                .scaleEffect(0.8 + 0.4 * progress)
+                .opacity(alpha)
+        )
     }
 }
 
@@ -1690,6 +1818,136 @@ struct BazaarOverlay: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(Capsule().fill(color.opacity(0.15)))
+    }
+}
+
+// MARK: - Amrita Kalash (5000-point life-revival relic)
+
+struct AmritaKalashButton: View {
+    let vm: GameViewModel
+    @State private var glow: Double = 0
+    @State private var consumed: Bool = false
+
+    var body: some View {
+        Button {
+            // Brief consume animation, then apply the effect.
+            withAnimation(.easeOut(duration: 0.25)) { consumed = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                vm.useAmritaKalash()
+                withAnimation(.easeIn(duration: 0.15)) { consumed = false }
+            }
+        } label: {
+            VStack(spacing: 4) {
+                kalashIcon
+                    .frame(width: 64, height: 78)
+                    .scaleEffect(consumed ? 1.4 : 1.0)
+                    .opacity(consumed ? 0.0 : 1.0)
+                HStack(spacing: 4) {
+                    Image(systemName: "sparkle").font(.system(size: 9, weight: .bold))
+                    Text("\(GameViewModel.amritaKalashCost) → +\(GameViewModel.amritaKalashLifeGain) lives")
+                        .font(.system(size: 11, weight: .heavy, design: .rounded))
+                        .monospacedDigit()
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 4)
+                .background(Capsule().fill(Color.black.opacity(0.55)))
+                .overlay(Capsule().stroke(Color.yellow.opacity(0.55), lineWidth: 1))
+            }
+        }
+        .buttonStyle(.plain)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+                glow = 1
+            }
+        }
+    }
+
+    /// Stylized golden kalash pot with glowing crown (amrita / nectar).
+    private var kalashIcon: some View {
+        ZStack {
+            // Outer divine halo, pulses softly
+            Circle()
+                .fill(RadialGradient(colors: [
+                    Color.yellow.opacity(0.55 + 0.25 * glow),
+                    Color.orange.opacity(0.20),
+                    .clear
+                ], center: .center, startRadius: 4, endRadius: 50))
+                .frame(width: 110, height: 110)
+                .blendMode(.plusLighter)
+
+            // Pot body
+            Path { p in
+                let w: CGFloat = 56
+                let h: CGFloat = 60
+                let cx: CGFloat = 32, cy: CGFloat = 46
+                p.move(to: CGPoint(x: cx - w/2, y: cy + 4))
+                p.addQuadCurve(to: CGPoint(x: cx + w/2, y: cy + 4),
+                               control: CGPoint(x: cx, y: cy + h * 0.65))
+                p.addLine(to: CGPoint(x: cx + w/2 - 8, y: cy - h * 0.30))
+                p.addQuadCurve(to: CGPoint(x: cx - w/2 + 8, y: cy - h * 0.30),
+                               control: CGPoint(x: cx, y: cy - h * 0.45))
+                p.closeSubpath()
+            }
+            .fill(LinearGradient(colors: [
+                Color(red: 1.0, green: 0.88, blue: 0.45),
+                Color(red: 0.85, green: 0.55, blue: 0.15),
+                Color(red: 0.50, green: 0.28, blue: 0.05)
+            ], startPoint: .top, endPoint: .bottom))
+            .shadow(color: .orange.opacity(0.8), radius: 4)
+            .overlay(
+                Path { p in
+                    let w: CGFloat = 56
+                    let cx: CGFloat = 32, cy: CGFloat = 46
+                    p.move(to: CGPoint(x: cx - w/2 + 4, y: cy + 4))
+                    p.addLine(to: CGPoint(x: cx + w/2 - 4, y: cy + 4))
+                }
+                .stroke(Color.white.opacity(0.7), lineWidth: 1)
+            )
+
+            // Neck ring
+            RoundedRectangle(cornerRadius: 3)
+                .fill(LinearGradient(colors: [Color.yellow, .orange],
+                                     startPoint: .top, endPoint: .bottom))
+                .frame(width: 38, height: 6)
+                .offset(y: -12)
+                .shadow(color: .orange, radius: 2)
+
+            // Crown / mango leaves
+            Path { p in
+                let cx: CGFloat = 32, cy: CGFloat = 18
+                p.move(to: CGPoint(x: cx - 14, y: cy + 4))
+                p.addQuadCurve(to: CGPoint(x: cx - 2, y: cy - 10),
+                               control: CGPoint(x: cx - 8, y: cy - 4))
+                p.addQuadCurve(to: CGPoint(x: cx + 2, y: cy - 10),
+                               control: CGPoint(x: cx, y: cy - 14))
+                p.addQuadCurve(to: CGPoint(x: cx + 14, y: cy + 4),
+                               control: CGPoint(x: cx + 8, y: cy - 4))
+                p.closeSubpath()
+            }
+            .fill(LinearGradient(colors: [.green, Color(red: 0.10, green: 0.45, blue: 0.18)],
+                                 startPoint: .top, endPoint: .bottom))
+            .shadow(color: .green.opacity(0.6), radius: 2)
+
+            // Nectar light bursting from the top
+            Circle()
+                .fill(RadialGradient(colors: [
+                    Color.white.opacity(0.95),
+                    Color.yellow.opacity(0.85),
+                    .clear
+                ], center: .center, startRadius: 1, endRadius: 10))
+                .frame(width: 16, height: 16)
+                .offset(y: -22)
+                .shadow(color: .yellow, radius: 6)
+
+            // Tiny "+" hint
+            Image(systemName: "heart.fill")
+                .font(.system(size: 14, weight: .heavy))
+                .foregroundColor(.red.opacity(0.95))
+                .offset(y: 44)
+                .shadow(color: .red, radius: 3)
+        }
+        .frame(width: 64, height: 78)
     }
 }
 

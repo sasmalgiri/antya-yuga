@@ -1148,6 +1148,17 @@ struct FireFlash: Identifiable {
     static let lifetime: TimeInterval = 0.25
 }
 
+/// A jagged "lightning" bolt drawn from a boss enemy to a tower it just hit.
+/// Renders for a short flash then fades out.
+struct BossAttackFlash: Identifiable {
+    let id = UUID()
+    let from: CGPoint
+    let to: CGPoint
+    let color: Color
+    var age: TimeInterval = 0
+    static let lifetime: TimeInterval = 0.35
+}
+
 struct BuildSlot: Identifiable {
     let id = UUID()
     let index: Int
@@ -1485,6 +1496,11 @@ final class GameViewModel {
     var projectiles: [Projectile] = []
     var fireFlashes: [FireFlash] = []
     var slots: [BuildSlot] = []
+
+    // Per-tick effect tracking — read by the view layer to draw auras and bolts.
+    var protectedTowerIDs: Set<UUID> = []
+    var healedTowerIDs: Set<UUID> = []
+    var bossAttackFlashes: [BossAttackFlash] = []
 
     private(set) var pathPoints: [CGPoint] = []
     private(set) var pathLength: CGFloat = 0
@@ -2162,8 +2178,10 @@ final class GameViewModel {
         spawnTick(dt: dt)
         updateEnemies(dt: dt)
         updateFireFlashes(dt: dt)
+        updateBossAttackFlashes(dt: dt)
         runDetection()
         runHealers(dt: dt)
+        runShieldTracking()
         runRaceRegen(dt: dt)
         bossAttackTowers(dt: dt)
         fireTowers(dt: dt, now: now)
@@ -2300,6 +2318,11 @@ final class GameViewModel {
         fireFlashes.removeAll { $0.age >= FireFlash.lifetime }
     }
 
+    private func updateBossAttackFlashes(dt: TimeInterval) {
+        for i in bossAttackFlashes.indices { bossAttackFlashes[i].age += dt }
+        bossAttackFlashes.removeAll { $0.age >= BossAttackFlash.lifetime }
+    }
+
     private func pickTarget(for tower: Tower) -> Enemy? {
         var best: Enemy? = nil
         var bestDistance: CGFloat = -1
@@ -2363,6 +2386,11 @@ final class GameViewModel {
                 let dmg = baseDmg * (1.0 - dr)
                 towers[ti].hp -= dmg
                 enemies[i].attackCooldown = enemies[i].kind.attackInterval
+                bossAttackFlashes.append(BossAttackFlash(
+                    from: enemies[i].position,
+                    to: towers[ti].position,
+                    color: enemies[i].kind.color
+                ))
             }
         }
     }
@@ -2392,6 +2420,7 @@ final class GameViewModel {
     }
 
     private func runHealers(dt: TimeInterval) {
+        healedTowerIDs.removeAll(keepingCapacity: true)
         guard isWaveActive else { return }
         let healers = towers.filter { $0.path == .sanjivani }
         guard !healers.isEmpty else { return }
@@ -2408,6 +2437,26 @@ final class GameViewModel {
             }
             if bestRate > 0 {
                 towers[i].hp = min(towers[i].maxHP, towers[i].hp + bestRate * dt)
+                healedTowerIDs.insert(towers[i].id)
+            }
+        }
+    }
+
+    /// Tracks which towers currently sit inside a Rekha barrier's aura.
+    /// Read by the view layer to draw the shield shimmer.
+    private func runShieldTracking() {
+        protectedTowerIDs.removeAll(keepingCapacity: true)
+        let shields = towers.filter { $0.path == .rekha }
+        guard !shields.isEmpty else { return }
+        for t in towers {
+            for s in shields where s.id != t.id {
+                let r = range(of: s)
+                let d = hypot(s.position.x - t.position.x,
+                              s.position.y - t.position.y)
+                if d <= r {
+                    protectedTowerIDs.insert(t.id)
+                    break
+                }
             }
         }
     }
@@ -2574,6 +2623,24 @@ final class GameViewModel {
     /// Spend Bazaar points to apply an item's effect. Instant items grant the
     /// effect now and are re-buyable; run buffs activate for the rest of the
     /// current run; permanent items unlock cross-run bonuses.
+    // MARK: - Amrita Kalash (life-revival relic)
+
+    /// Threshold of available points needed for the Amrita Kalash to appear / be used.
+    static let amritaKalashCost = 5000
+    /// Lives restored when the Kalash is consumed.
+    static let amritaKalashLifeGain = 25
+
+    var canUseAmritaKalash: Bool { availablePoints >= Self.amritaKalashCost }
+
+    /// Spends 5000 points and restores 25 lives. The Kalash icon stays
+    /// visible only while the player can afford it.
+    @discardableResult
+    func useAmritaKalash() -> Bool {
+        guard payPoints(Self.amritaKalashCost) else { return false }
+        lives += Self.amritaKalashLifeGain
+        return true
+    }
+
     @discardableResult
     func buyBazaarItem(_ item: BazaarItem) -> BazaarPurchaseResult {
         let store = BazaarStore.shared
@@ -2645,6 +2712,9 @@ final class GameViewModel {
         enemies.removeAll()
         projectiles.removeAll()
         fireFlashes.removeAll()
+        bossAttackFlashes.removeAll()
+        protectedTowerIDs.removeAll()
+        healedTowerIDs.removeAll()
         selectedSlotIndex = nil
         selectedTowerID = nil
         selectedBuildingID = nil
