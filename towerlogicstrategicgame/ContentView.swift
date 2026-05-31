@@ -89,6 +89,23 @@ struct ContentView: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
 
+            // Sudarshan endgame UI — center-of-screen relic, charging meter
+            // and tap-to-feed button. Active any time Dvapara is unlocked.
+            if vm.sudarshanPhase == .charging {
+                SudarshanCenterTowerView(vm: vm)
+                    .position(vm.sudarshanPosition)
+                    .allowsHitTesting(true)
+            }
+            // Chakra animation — spins on the path centre while maturation runs.
+            if vm.sudarshanPhase == .matured {
+                SudarshanChakraView(vm: vm)
+                    .allowsHitTesting(false)
+            }
+
+            if vm.sudarshanPhase == .victory {
+                VictoryOverlay(vm: vm)
+            }
+
             if vm.isGameOver {
                 GameOverOverlay(vm: vm)
             }
@@ -2042,6 +2059,176 @@ struct AmritaKalashButton: View {
                 .shadow(color: .red, radius: 3)
         }
         .frame(width: 64, height: 78)
+    }
+}
+
+// MARK: - Sudarshan endgame views
+
+/// Inactive center tower that accepts resource taps to charge the chakra.
+struct SudarshanCenterTowerView: View {
+    let vm: GameViewModel
+    @State private var pulse: Double = 0
+
+    var body: some View {
+        VStack(spacing: 6) {
+            ZStack {
+                // Outer charge ring
+                Circle()
+                    .stroke(Color.yellow.opacity(0.22), lineWidth: 5)
+                    .frame(width: 96, height: 96)
+                Circle()
+                    .trim(from: 0, to: vm.sudarshanCharge)
+                    .stroke(
+                        AngularGradient(colors: [.yellow, .orange, .red, .yellow],
+                                        center: .center),
+                        style: StrokeStyle(lineWidth: 5, lineCap: .round)
+                    )
+                    .frame(width: 96, height: 96)
+                    .rotationEffect(.degrees(-90))
+                // Inner dormant disc
+                Circle()
+                    .fill(RadialGradient(colors: [
+                        Color.yellow.opacity(0.5 + 0.2 * pulse),
+                        Color(red: 0.4, green: 0.18, blue: 0.05),
+                        .black
+                    ], center: .center, startRadius: 4, endRadius: 40))
+                    .frame(width: 80, height: 80)
+                Image(systemName: "circle.hexagongrid.fill")
+                    .font(.system(size: 30, weight: .heavy))
+                    .foregroundColor(.yellow.opacity(0.95))
+                    .shadow(color: .orange, radius: 4)
+                Text(vm.sudarshanCharge >= 1.0 ? "Ready" : "\(Int(vm.sudarshanCharge * 100))%")
+                    .font(.system(size: 11, weight: .heavy, design: .rounded))
+                    .foregroundColor(.white)
+                    .offset(y: 32)
+                    .shadow(color: .black, radius: 2)
+            }
+
+            Button {
+                vm.tapSudarshan()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "plus.circle.fill")
+                    Text("Feed")
+                        .font(.system(size: 11, weight: .heavy, design: .rounded))
+                    HStack(spacing: 1) {
+                        Text("300")
+                        Image(systemName: "dollarsign.circle.fill").foregroundColor(.yellow)
+                        Text("·30")
+                        Image(systemName: "shield.lefthalf.filled").foregroundColor(.gray)
+                    }
+                    .font(.system(size: 9, weight: .semibold, design: .rounded))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Capsule().fill(Color(red: 0.55, green: 0.30, blue: 0.78)))
+                .overlay(Capsule().stroke(Color.yellow.opacity(0.6), lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            .disabled(vm.sudarshanCharge >= 1.0 && vm.finalBoss == nil)
+        }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) {
+                pulse = 1
+            }
+        }
+    }
+}
+
+/// The Sudarshan Chakra: a rotating disc rendered over the path centre
+/// during the maturation phase. Visual-only; damage is in runSudarshanPhase.
+struct SudarshanChakraView: View {
+    let vm: GameViewModel
+
+    var body: some View {
+        GeometryReader { geo in
+            let centre = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
+            ZStack {
+                Circle()
+                    .fill(RadialGradient(colors: [
+                        Color.yellow.opacity(0.6), Color.orange.opacity(0.3), .clear
+                    ], center: .center, startRadius: 10, endRadius: 200))
+                    .frame(width: 320, height: 320)
+                    .blendMode(.plusLighter)
+                ForEach(0..<12, id: \.self) { i in
+                    Rectangle()
+                        .fill(LinearGradient(colors: [.white, .yellow, .red],
+                                             startPoint: .top, endPoint: .bottom))
+                        .frame(width: 4, height: 90)
+                        .offset(y: -55)
+                        .rotationEffect(.degrees(Double(i) * 30))
+                        .shadow(color: .yellow, radius: 6)
+                }
+                Circle()
+                    .stroke(LinearGradient(colors: [.white, .yellow], startPoint: .top, endPoint: .bottom),
+                            lineWidth: 4)
+                    .frame(width: 120, height: 120)
+                Image(systemName: "circle.hexagongrid.fill")
+                    .font(.system(size: 60, weight: .heavy))
+                    .foregroundColor(.yellow)
+                    .shadow(color: .orange, radius: 12)
+            }
+            .rotationEffect(.degrees(vm.chakraAngle))
+            .position(centre)
+        }
+    }
+}
+
+/// Final victory screen — shown when Kala-Asura falls.
+struct VictoryOverlay: View {
+    let vm: GameViewModel
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.85).ignoresSafeArea()
+            VStack(spacing: 16) {
+                Text("Dharma Prevails")
+                    .font(.system(size: 32, weight: .heavy, design: .rounded))
+                    .foregroundColor(.yellow)
+                    .shadow(color: .orange, radius: 8)
+                Text("विजयः सत्यस्य")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.85))
+                Text("Score: \(vm.score) · Wave \(vm.wave)")
+                    .font(.system(size: 14, design: .rounded))
+                    .foregroundColor(.white.opacity(0.8))
+                HStack(spacing: 10) {
+                    Button {
+                        vm.fullReset()
+                    } label: {
+                        Text("Play Again")
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundColor(.black)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 10)
+                            .background(Color.yellow)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    Button { exit(0) } label: {
+                        Text("Exit")
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 10)
+                            .background(Color(red: 0.55, green: 0.10, blue: 0.10))
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(26)
+            .background(
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(Color.black.opacity(0.88))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18)
+                            .stroke(Color.yellow.opacity(0.7), lineWidth: 2)
+                    )
+                    .shadow(color: .yellow.opacity(0.6), radius: 16)
+            )
+        }
     }
 }
 

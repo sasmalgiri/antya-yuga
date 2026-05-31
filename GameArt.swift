@@ -632,6 +632,7 @@ struct EnemyArtView: View {
         case .bhasmasura:     SpecialistEnemyArt(size: size, color: color, badge: "flame.fill",              badgeColor: .orange, halo: true)
         case .vritra:         SpecialistEnemyArt(size: size, color: color, badge: "cloud.bolt.rain.fill",    badgeColor: .cyan,   halo: false)
         case .putana:         SpecialistEnemyArt(size: size, color: color, badge: "leaf.fill",               badgeColor: .green,  halo: true)
+        case .kalaAsura:      SpecialistEnemyArt(size: size, color: color, badge: "crown.fill",              badgeColor: .red,    halo: true)
         }
     }
 }

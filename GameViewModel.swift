@@ -1183,6 +1183,7 @@ enum EnemyKind: String, CaseIterable {
     case bhasmasura      // fire incarnate; melts towers, fire-immune
     case vritra          // drought serpent; water + ice useless
     case putana          // disguised demoness; only divine damage works
+    case kalaAsura       // FINAL BOSS — only the Sudarshan Chakra can kill it
 
     var displayName: String {
         switch self {
@@ -1205,6 +1206,7 @@ enum EnemyKind: String, CaseIterable {
         case .bhasmasura:     return "Bhasmasura"
         case .vritra:         return "Vritra"
         case .putana:         return "Putana"
+        case .kalaAsura:      return "Kala-Asura"
         }
     }
 
@@ -1229,6 +1231,7 @@ enum EnemyKind: String, CaseIterable {
         case .bhasmasura:     return 800
         case .vritra:         return 3200
         case .putana:         return 1000
+        case .kalaAsura:      return 50000  // final boss — chakra is the realistic killer
         }
     }
 
@@ -1253,13 +1256,14 @@ enum EnemyKind: String, CaseIterable {
         case .bhasmasura:     return 60
         case .vritra:         return 32
         case .putana:         return 55
+        case .kalaAsura:      return 22   // slow shambling apex; only moves when path is clear
         }
     }
 
     /// Boss-tier flag — used for race signature damage bonuses.
     var isBoss: Bool {
         switch self {
-        case .mahishasura, .ravana, .indrajit, .tarakasura, .vritra: return true
+        case .mahishasura, .ravana, .indrajit, .tarakasura, .vritra, .kalaAsura: return true
         default: return false
         }
     }
@@ -1286,6 +1290,7 @@ enum EnemyKind: String, CaseIterable {
         case .bhasmasura:     return 8
         case .vritra:         return 30
         case .putana:         return 12
+        case .kalaAsura:      return 200  // victory reward
         }
     }
 
@@ -1310,6 +1315,7 @@ enum EnemyKind: String, CaseIterable {
         case .bhasmasura:     return 90
         case .vritra:         return 400
         case .putana:         return 140
+        case .kalaAsura:      return 2000   // huge gold drop on victory
         }
     }
 
@@ -1334,6 +1340,7 @@ enum EnemyKind: String, CaseIterable {
         case .bhasmasura:     return 22
         case .vritra:         return 36
         case .putana:         return 24
+        case .kalaAsura:      return 50   // visually massive
         }
     }
 
@@ -1358,6 +1365,7 @@ enum EnemyKind: String, CaseIterable {
         case .bhasmasura:     return Color(red: 0.35, green: 0.30, blue: 0.30)   // charcoal ash
         case .vritra:         return Color(red: 0.10, green: 0.30, blue: 0.30)   // serpent teal
         case .putana:         return Color(red: 0.30, green: 0.65, blue: 0.30)   // poison green
+        case .kalaAsura:      return Color(red: 0.08, green: 0.05, blue: 0.18)   // void black
         }
     }
 
@@ -1382,6 +1390,7 @@ enum EnemyKind: String, CaseIterable {
         case .bhasmasura:     return "flame.circle.fill"
         case .vritra:         return "cloud.bolt.rain.fill"
         case .putana:         return "leaf.fill"
+        case .kalaAsura:      return "crown.fill"
         }
     }
 
@@ -1414,6 +1423,7 @@ enum EnemyKind: String, CaseIterable {
         case .bhasmasura:     return [.fire]               // fire incarnate
         case .vritra:         return [.water, .ice]        // serpent of drought; embodies absence of water
         case .putana:         return [.physical, .fire, .water, .ice]  // only divine touch slays her
+        case .kalaAsura:      return [.physical, .fire, .water, .ice]  // realistically only the chakra kills him
         }
     }
 
@@ -1426,7 +1436,8 @@ enum EnemyKind: String, CaseIterable {
 
     var attacksTowers: Bool {
         switch self {
-        case .mahishasura, .ravana, .indrajit, .tarakasura, .vritra, .bhasmasura, .putana: return true
+        case .mahishasura, .ravana, .indrajit, .tarakasura, .vritra,
+             .bhasmasura, .putana, .kalaAsura: return true
         default: return false
         }
     }
@@ -1440,6 +1451,7 @@ enum EnemyKind: String, CaseIterable {
         case .vritra:      return 65
         case .bhasmasura:  return 25
         case .putana:      return 28   // siphon — heals self for this amount per hit
+        case .kalaAsura:   return 55   // strong but path-gated (won't move until tower dies)
         default: return 0
         }
     }
@@ -1453,6 +1465,7 @@ enum EnemyKind: String, CaseIterable {
         case .vritra:      return 0.8
         case .bhasmasura:  return 1.1
         case .putana:      return 1.0
+        case .kalaAsura:   return 1.0
         default: return 0
         }
     }
@@ -1519,6 +1532,29 @@ final class GameViewModel {
     var terrorTowerIDs: Set<UUID> = []
     /// Buildings inside an alive Vritra's drought aura — stop producing resources.
     var droughtBuildingIDs: Set<UUID> = []
+
+    // MARK: - Sudarshan Chakra endgame
+
+    enum SudarshanPhase: Int {
+        case inactive   // pre-Dvapara
+        case charging   // center tower visible, player feeds resources
+        case matured    // chakra spinning, final boss spawning, towers assimilated
+        case victory    // final boss defeated
+    }
+
+    var sudarshanPhase: SudarshanPhase = .inactive
+    /// 0..1 charge progress while .charging
+    var sudarshanCharge: Double = 0
+    /// Center tower world position (lazily set when phase enters .charging)
+    var sudarshanPosition: CGPoint = .zero
+    /// Rotation angle for the chakra visual (driven by SwiftUI)
+    var chakraAngle: Double = 0
+    /// Convenience accessor for the on-field Kala-Asura (the final boss).
+    var finalBoss: Enemy? { enemies.first(where: { $0.kind == .kalaAsura }) }
+
+    /// Resources required per "charge tap" — 10 taps fills the meter.
+    static let sudarshanTapCost = Resources(gold: 300, metal: 30, tech: 30, jotisha: 30, veda: 30)
+    static let sudarshanTapProgress: Double = 0.10
 
     private(set) var pathPoints: [CGPoint] = []
     private(set) var pathLength: CGFloat = 0
@@ -1590,7 +1626,72 @@ final class GameViewModel {
         newAgeBanner = next
         bannerTimer = 3.0
         lastSeenAge = next
+        // Trigger Sudarshan endgame the first time Dvapara is unlocked.
+        if next == .modern, sudarshanPhase == .inactive {
+            beginSudarshanPhase()
+        }
         SoundEngine.shared.playAgeUnlocked()
+    }
+
+    // MARK: - Sudarshan Chakra endgame logic
+
+    private func beginSudarshanPhase() {
+        sudarshanPhase = .charging
+        sudarshanCharge = 0
+        // Center of the playfield, with a slight upward bias so the icon
+        // sits in the visual middle and is reachable on iPad too.
+        sudarshanPosition = CGPoint(x: lastConfiguredSize.width / 2,
+                                    y: lastConfiguredSize.height / 2)
+    }
+
+    /// Returns true if the tap was accepted (had resources, advanced charge).
+    @discardableResult
+    func tapSudarshan() -> Bool {
+        guard sudarshanPhase == .charging else { return false }
+        let cost = Self.sudarshanTapCost
+        guard stock.canAfford(cost) else { return false }
+        stock = stock - cost
+        sudarshanCharge = min(1.0, sudarshanCharge + Self.sudarshanTapProgress)
+        SoundEngine.shared.playBuildPlaced()
+        tryMatureIfReady()
+        return true
+    }
+
+    /// Charge meter is full AND the final boss is on the field → mature.
+    private func tryMatureIfReady() {
+        guard sudarshanPhase == .charging,
+              sudarshanCharge >= 1.0,
+              finalBoss != nil else { return }
+        matureSudarshan()
+    }
+
+    private func matureSudarshan() {
+        sudarshanPhase = .matured
+        // Combined power flows into the chakra — assimilate all towers.
+        // (Stones refund half to the player as a small consolation.)
+        for t in towers {
+            if let s = t.stone {
+                var stoneSpent = Resources()
+                for lvl in 1...s.level { stoneSpent = stoneSpent + s.kind.cost(forLevel: lvl) }
+                stock = stock + stoneSpent.scaled(by: 0.5)
+            }
+        }
+        towers.removeAll()
+        selectedTowerID = nil
+        SoundEngine.shared.playAgeUnlocked()
+    }
+
+    /// Per-tick chakra logic. While .matured the chakra blasts every enemy on
+    /// screen, with bonus damage to the final boss. Victory is detected in
+    /// cleanupEnemies when Kala-Asura's HP drops to zero.
+    private func runSudarshanPhase(dt: TimeInterval) {
+        guard sudarshanPhase == .matured else { return }
+        chakraAngle = (chakraAngle + dt * 320).truncatingRemainder(dividingBy: 360)
+        let baseDPS = 650.0
+        for i in enemies.indices where enemies[i].hp > 0 {
+            let mult = enemies[i].kind == .kalaAsura ? 1.4 : 1.0
+            enemies[i].hp -= baseDPS * mult * dt
+        }
     }
 
     private var lastConfiguredSize: CGSize = .zero
@@ -1940,6 +2041,10 @@ final class GameViewModel {
 
         } else {
             // EXTREME: every wave has 3+ bosses
+            // FINAL: at wave 48, Kala-Asura debuts — only one ever spawned.
+            if n == 48, !enemies.contains(where: { $0.kind == .kalaAsura }) {
+                list.append((.kalaAsura, 0.6))
+            }
             let p = 28 + n * 2
             let r = 20 + (n - 19)
             let d = 16 + (n - 19)
@@ -2253,6 +2358,8 @@ final class GameViewModel {
         runEnemyAbilities()
         runRaceRegen(dt: dt)
         bossAttackTowers(dt: dt)
+        runSudarshanPhase(dt: dt)
+        tryMatureIfReady()
         fireTowers(dt: dt, now: now)
         moveProjectiles(dt: dt)
         cleanupEnemies()
@@ -2327,9 +2434,19 @@ final class GameViewModel {
             if regen > 0, enemies[i].hp > 0 {
                 enemies[i].hp = min(enemies[i].maxHP, enemies[i].hp + regen * dt)
             }
-            let speed = enemies[i].kind.speed * enemies[i].slowFactor * enemies[i].speedMultiplier
-                        * CGFloat(rageMultiplier(of: enemies[i]))
-            enemies[i].distance += speed * CGFloat(dt)
+            // Kala-Asura is path-gated: he stays put as long as any tower is
+            // within his attack reach. Only advances after killing the tower.
+            var effectiveSpeed = enemies[i].kind.speed * enemies[i].slowFactor * enemies[i].speedMultiplier
+                                 * CGFloat(rageMultiplier(of: enemies[i]))
+            if enemies[i].kind == .kalaAsura {
+                let reach: CGFloat = 75
+                let hasTowerToKill = towers.contains { t in
+                    hypot(t.position.x - enemies[i].position.x,
+                          t.position.y - enemies[i].position.y) < reach
+                }
+                if hasTowerToKill { effectiveSpeed = 0 }
+            }
+            enemies[i].distance += effectiveSpeed * CGFloat(dt)
             if enemies[i].distance >= pathLength {
                 enemies[i].distance = pathLength
                 enemies[i].hp = 0
@@ -2753,6 +2870,10 @@ final class GameViewModel {
                 drops = drops + e.kind.resourceDrop
                 // Kind-specific death sound; bosses also trigger a victory sloka.
                 SoundEngine.shared.playEnemyDeath(kind: e.kind)
+                // Final boss falling = the run is won.
+                if e.kind == .kalaAsura {
+                    sudarshanPhase = .victory
+                }
             }
         }
         if lifeLoss > 0 { lives -= lifeLoss }
@@ -2911,6 +3032,9 @@ final class GameViewModel {
         drainedTowerIDs.removeAll()
         terrorTowerIDs.removeAll()
         droughtBuildingIDs.removeAll()
+        sudarshanPhase = .inactive
+        sudarshanCharge = 0
+        chakraAngle = 0
         selectedSlotIndex = nil
         selectedTowerID = nil
         selectedBuildingID = nil
