@@ -1224,11 +1224,11 @@ enum EnemyKind: String, CaseIterable {
         case .yantraPishacha: return 800
         case .taraDevi:       return 1000
         case .rishiAtma:      return 1700
-        case .raktabija:      return 1200
-        case .tarakasura:     return 2200
+        case .raktabija:      return 1100
+        case .tarakasura:     return 1800   // softened — boss trait already adds pressure
         case .bhasmasura:     return 800
-        case .vritra:         return 3500
-        case .putana:         return 1100
+        case .vritra:         return 3200
+        case .putana:         return 1000
         }
     }
 
@@ -1436,10 +1436,10 @@ enum EnemyKind: String, CaseIterable {
         case .mahishasura: return 35
         case .ravana:      return 80
         case .indrajit:    return 55
-        case .tarakasura:  return 50
-        case .vritra:      return 70
+        case .tarakasura:  return 45
+        case .vritra:      return 65
         case .bhasmasura:  return 25
-        case .putana:      return 30   // siphon — heals self for this amount per hit
+        case .putana:      return 28   // siphon — heals self for this amount per hit
         default: return 0
         }
     }
@@ -1515,6 +1515,10 @@ final class GameViewModel {
     var debuffedTowerIDs: Set<UUID> = []
     /// Towers currently being drained by Putana (transient one-tick flag for visuals).
     var drainedTowerIDs: Set<UUID> = []
+    /// Towers inside an alive Ravana's terror aura — reload 50% slower.
+    var terrorTowerIDs: Set<UUID> = []
+    /// Buildings inside an alive Vritra's drought aura — stop producing resources.
+    var droughtBuildingIDs: Set<UUID> = []
 
     private(set) var pathPoints: [CGPoint] = []
     private(set) var pathLength: CGFloat = 0
@@ -1774,7 +1778,10 @@ final class GameViewModel {
         if let s = tower.stone {
             raceMult *= s.kind.fireRateMultiplier(level: s.level)
         }
-        return effectiveKind(of: tower).baseFireInterval / raceMult
+        var interval = effectiveKind(of: tower).baseFireInterval / raceMult
+        // Ravana terror aura — reload 50% slower.
+        if terrorTowerIDs.contains(tower.id) { interval *= 1.5 }
+        return interval
     }
 
     func range(of tower: Tower) -> CGFloat {
@@ -2246,6 +2253,8 @@ final class GameViewModel {
         // Buildings only produce during active waves (work-time only)
         guard isWaveActive else { return }
         for i in buildings.indices {
+            // Vritra drought aura halts production entirely.
+            if droughtBuildingIDs.contains(buildings[i].id) { continue }
             let mult = race?.genMultiplier(for: buildings[i].kind.resource) ?? 1.0
             buildings[i].partial += buildings[i].genPerSec * mult * dt
             if buildings[i].partial >= 1 {
@@ -2307,6 +2316,7 @@ final class GameViewModel {
                 enemies[i].hp = min(enemies[i].maxHP, enemies[i].hp + regen * dt)
             }
             let speed = enemies[i].kind.speed * enemies[i].slowFactor * enemies[i].speedMultiplier
+                        * CGFloat(rageMultiplier(of: enemies[i]))
             enemies[i].distance += speed * CGFloat(dt)
             if enemies[i].distance >= pathLength {
                 enemies[i].distance = pathLength
@@ -2439,7 +2449,7 @@ final class GameViewModel {
                 let baseDmg = enemies[i].towerDamageOverride > 0
                     ? enemies[i].towerDamageOverride
                     : enemies[i].kind.towerDamage
-                let dmg = baseDmg * (1.0 - dr)
+                let dmg = baseDmg * (1.0 - dr) * rageMultiplier(of: enemies[i])
                 towers[ti].hp -= dmg
                 enemies[i].attackCooldown = enemies[i].kind.attackInterval
                 bossAttackFlashes.append(BossAttackFlash(
@@ -2513,8 +2523,8 @@ final class GameViewModel {
         // checkWaveCompletion). Spreads to adjacent unprotected towers each tick.
         var newControlled = controlledTowerIDs
         let raktas = enemies.filter { $0.kind == .raktabija && $0.hp > 0 }
-        let raktaReach: CGFloat = 80
-        let bloodSpread: CGFloat = 60
+        let raktaReach: CGFloat = 70    // softened from 80 — gives time to set Rekha cover
+        let bloodSpread: CGFloat = 55   // softened from 60
         for r in raktas {
             for t in towers where !newControlled.contains(t.id) && !protectedTowerIDs.contains(t.id) {
                 let d = hypot(r.position.x - t.position.x, r.position.y - t.position.y)
@@ -2539,7 +2549,7 @@ final class GameViewModel {
         // has its stats reduced to its path's tier-1 astra. Recomputed every tick.
         var newDebuffed: Set<UUID> = []
         let bhasmas = enemies.filter { $0.kind == .bhasmasura && $0.hp > 0 }
-        let ashRadius: CGFloat = 110
+        let ashRadius: CGFloat = 95   // softened from 110
         if !bhasmas.isEmpty {
             for t in towers {
                 for b in bhasmas {
@@ -2554,6 +2564,40 @@ final class GameViewModel {
 
         // Drained set is transient — reset here, populated in bossAttackTowers.
         if !drainedTowerIDs.isEmpty { drainedTowerIDs.removeAll() }
+
+        // --- Ravana terror aura: nearby towers reload 50% slower.
+        var newTerror: Set<UUID> = []
+        let ravanas = enemies.filter { $0.kind == .ravana && $0.hp > 0 }
+        let terrorReach: CGFloat = 100   // softened from 120 — targeted intimidation, not blanket
+        if !ravanas.isEmpty {
+            for t in towers {
+                for r in ravanas {
+                    let d = hypot(r.position.x - t.position.x, r.position.y - t.position.y)
+                    if d < terrorReach { newTerror.insert(t.id); break }
+                }
+            }
+        }
+        if newTerror != terrorTowerIDs { terrorTowerIDs = newTerror }
+
+        // --- Vritra drought aura: nearby buildings stop generating.
+        var newDrought: Set<UUID> = []
+        let vritras = enemies.filter { $0.kind == .vritra && $0.hp > 0 }
+        let droughtReach: CGFloat = 140
+        if !vritras.isEmpty {
+            for b in buildings {
+                for v in vritras {
+                    let d = hypot(v.position.x - b.position.x, v.position.y - b.position.y)
+                    if d < droughtReach { newDrought.insert(b.id); break }
+                }
+            }
+        }
+        if newDrought != droughtBuildingIDs { droughtBuildingIDs = newDrought }
+    }
+
+    /// Mahishasura berserker rage — at <50% HP gains +40% speed and tower-damage.
+    func rageMultiplier(of enemy: Enemy) -> Double {
+        guard enemy.kind == .mahishasura else { return 1.0 }
+        return enemy.hp < enemy.maxHP * 0.5 ? 1.4 : 1.0
     }
 
     /// Tracks which towers currently sit inside a Rekha barrier's aura.
@@ -2624,7 +2668,18 @@ final class GameViewModel {
         let immune = enemies[index].kind.immunities.contains(projectile.damageType)
         // Raghuvansh signature: +50% damage to bosses.
         let bossMult = enemies[index].kind.isBoss ? (race?.bossDamageBonus ?? 1.0) : 1.0
-        let actualDamage = immune ? 0 : damage * bossMult
+        var actualDamage = immune ? 0 : damage * bossMult
+        // Tarakasura adamantine armor — ignore single hits below 35 damage.
+        // Forces T2+ astras (or T1 + a Chuni stone) to hurt him.
+        if enemies[index].kind == .tarakasura, actualDamage > 0, actualDamage < 35 {
+            actualDamage = 0
+        }
+        // Indrajit illusion — at <50% HP, 25% chance any incoming hit misses.
+        if enemies[index].kind == .indrajit,
+           enemies[index].hp < enemies[index].maxHP * 0.5,
+           Double.random(in: 0..<1) < 0.25 {
+            actualDamage = 0
+        }
         enemies[index].hp -= actualDamage
 
         if !immune {
@@ -2840,6 +2895,8 @@ final class GameViewModel {
         controlledTowerIDs.removeAll()
         debuffedTowerIDs.removeAll()
         drainedTowerIDs.removeAll()
+        terrorTowerIDs.removeAll()
+        droughtBuildingIDs.removeAll()
         selectedSlotIndex = nil
         selectedTowerID = nil
         selectedBuildingID = nil
