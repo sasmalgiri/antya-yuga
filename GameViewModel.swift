@@ -229,17 +229,17 @@ enum Age: Int, CaseIterable, Identifiable {
 
     var name: String {
         switch self {
-        case .ancient: return "Ancient Yug"
-        case .middle:  return "Middle Yug"
-        case .modern:  return "Modern Yug"
+        case .ancient: return "Satya Yuga"
+        case .middle:  return "Treta Yuga"
+        case .modern:  return "Dvapara Yuga"
         }
     }
 
     var shortName: String {
         switch self {
-        case .ancient: return "Ancient"
-        case .middle:  return "Middle"
-        case .modern:  return "Modern"
+        case .ancient: return "Satya"
+        case .middle:  return "Treta"
+        case .modern:  return "Dvapara"
         }
     }
 
