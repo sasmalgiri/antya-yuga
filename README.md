@@ -1,4 +1,4 @@
-# Astra Yug
+# Anta Yuga
 
 A SwiftUI tower-defence game for iOS / iPadOS, inspired by Indian itihāsa
 (Ramayana, Mahabharata, Puranas).
@@ -6,7 +6,7 @@ A SwiftUI tower-defence game for iOS / iPadOS, inspired by Indian itihāsa
 > Defend the cosmos across three Yugas with 24 divine astras, 14 mythological
 > enemies, and 4 dynasties.
 
-**Site:** <https://sasmalgiri.github.io/astra-yug/>
+**Site:** <https://sasmalgiri.github.io/anta-yuga/>
 
 ---
 
