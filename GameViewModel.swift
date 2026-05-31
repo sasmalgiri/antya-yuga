@@ -179,15 +179,15 @@ enum Race: String, CaseIterable, Identifiable {
 
     var trait: String {
         switch self {
-        case .raghuvansh:  return "+25% tower damage"
-        case .maurya:      return "+25% tower fire rate"
-        case .gupta:       return "+20% tower damage"
-        case .pratihara:   return "+25% tower range"
-        case .rashtrakuta: return "+15% damage & +15% fire rate"
-        case .pal:         return "−10% gold cost on towers"
-        case .chola:       return "+20% tower fire rate"
-        case .sen:         return "+20% tower range"
-        case .ahom:        return "+20% tower range"
+        case .raghuvansh:  return "+25% damage · +50% damage to bosses"
+        case .maurya:      return "+25% fire rate · +30% projectile speed"
+        case .gupta:       return "+20% damage · all towers reveal invisible"
+        case .pratihara:   return "+25% range · +30% tower HP"
+        case .rashtrakuta: return "+15% damage & fire rate · −25% building cost"
+        case .pal:         return "−10% gold cost · −25% stone cost"
+        case .chola:       return "+20% fire rate · +50% kill rewards"
+        case .sen:         return "+20% range · +1 chain target on chain astras"
+        case .ahom:        return "+20% range · towers regen 1.5 HP/s in waves"
         }
     }
 
@@ -289,6 +289,35 @@ enum Race: String, CaseIterable, Identifiable {
         case .ahom:        return "tree.fill"
         }
     }
+
+    // MARK: - Signature mechanics (one unique ability per race)
+
+    /// Multiplier applied on top of base damage when hitting boss-tier enemies.
+    var bossDamageBonus: Double { self == .raghuvansh ? 1.50 : 1.0 }
+
+    /// Multiplier applied to projectile speed at creation.
+    var projectileSpeedMultiplier: CGFloat { self == .maurya ? 1.30 : 1.0 }
+
+    /// If true, every tower can target invisible enemies without a sensor tower.
+    var revealsInvisible: Bool { self == .gupta }
+
+    /// Multiplier on tower starting / max HP.
+    var towerHPMultiplier: Double { self == .pratihara ? 1.30 : 1.0 }
+
+    /// Multiplier on building gold/resource cost (both placement and upgrade).
+    var buildingCostMultiplier: Double { self == .rashtrakuta ? 0.75 : 1.0 }
+
+    /// Multiplier on stone purchase + upgrade cost.
+    var stoneCostMultiplier: Double { self == .pal ? 0.75 : 1.0 }
+
+    /// Multiplier on gold and Bazaar points earned per enemy kill.
+    var killRewardMultiplier: Double { self == .chola ? 1.50 : 1.0 }
+
+    /// Extra chain targets added to chain-type astras (Aindrastra, Naga Pasha).
+    var bonusChainTargets: Int { self == .sen ? 1 : 0 }
+
+    /// Tower HP regenerated per second while a wave is active.
+    var towerRegenPerSec: Double { self == .ahom ? 1.5 : 0 }
 }
 
 // MARK: - Age
@@ -1195,6 +1224,14 @@ enum EnemyKind: String, CaseIterable {
         }
     }
 
+    /// Boss-tier flag — used for race signature damage bonuses.
+    var isBoss: Bool {
+        switch self {
+        case .mahishasura, .ravana, .indrajit: return true
+        default: return false
+        }
+    }
+
     /// Bazaar points granted for killing this enemy. Per-run currency; resets at game over.
     var bazaarPointReward: Int {
         switch self {
@@ -1894,7 +1931,12 @@ final class GameViewModel {
         let cost = effectiveCost(of: path.astras[0])
         guard stock.canAfford(cost) else { return }
         stock = stock - cost
-        towers.append(Tower(slotIndex: slotIndex, position: slot.position, path: path))
+        var tower = Tower(slotIndex: slotIndex, position: slot.position, path: path)
+        // Pratihara signature: +30% tower HP.
+        let hpMult = race?.towerHPMultiplier ?? 1.0
+        tower.maxHP *= hpMult
+        tower.hp = tower.maxHP
+        towers.append(tower)
         selectedSlotIndex = nil
         SoundEngine.shared.playBuildPlaced()
     }
@@ -1926,10 +1968,16 @@ final class GameViewModel {
 
     // MARK: - Stone management
 
+    /// Pal signature: −25% stone cost (both attach and upgrade).
+    func effectiveStoneCost(_ cost: Resources) -> Resources {
+        let m = race?.stoneCostMultiplier ?? 1.0
+        return m == 1.0 ? cost : cost.scaled(by: m)
+    }
+
     func attachStone(towerID: UUID, kind: StoneKind) {
         guard let i = towers.firstIndex(where: { $0.id == towerID }) else { return }
         guard towers[i].stone == nil else { return }
-        let cost = kind.cost(forLevel: 1)
+        let cost = effectiveStoneCost(kind.cost(forLevel: 1))
         guard stock.canAfford(cost) else { return }
         stock = stock - cost
         towers[i].stone = Stone(kind: kind, level: 1)
@@ -1938,13 +1986,13 @@ final class GameViewModel {
 
     func canUpgradeStone(_ tower: Tower) -> Bool {
         guard let s = tower.stone, s.level < 3 else { return false }
-        return stock.canAfford(s.kind.cost(forLevel: s.level + 1))
+        return stock.canAfford(effectiveStoneCost(s.kind.cost(forLevel: s.level + 1)))
     }
 
     func upgradeStone(towerID: UUID) {
         guard let i = towers.firstIndex(where: { $0.id == towerID }),
               var s = towers[i].stone, s.level < 3 else { return }
-        let cost = s.kind.cost(forLevel: s.level + 1)
+        let cost = effectiveStoneCost(s.kind.cost(forLevel: s.level + 1))
         guard stock.canAfford(cost) else { return }
         stock = stock - cost
         s.level += 1
@@ -1962,28 +2010,35 @@ final class GameViewModel {
 
     // MARK: - Building management
 
+    /// Rashtrakuta signature: −25% building cost.
+    func effectiveBuildingCost(_ cost: Resources) -> Resources {
+        let m = race?.buildingCostMultiplier ?? 1.0
+        return m == 1.0 ? cost : cost.scaled(by: m)
+    }
+
     func canAffordBuilding(_ kind: BuildingKind) -> Bool {
-        stock.canAfford(kind.cost)
+        stock.canAfford(effectiveBuildingCost(kind.cost))
     }
 
     func placeBuilding(at slotIndex: Int, kind: BuildingKind) {
         guard let slot = slots.first(where: { $0.index == slotIndex }),
               !isSlotOccupied(slotIndex) else { return }
-        guard stock.canAfford(kind.cost) else { return }
-        stock = stock - kind.cost
+        let cost = effectiveBuildingCost(kind.cost)
+        guard stock.canAfford(cost) else { return }
+        stock = stock - cost
         buildings.append(Building(slotIndex: slotIndex, position: slot.position, kind: kind))
         selectedSlotIndex = nil
         SoundEngine.shared.playBuildPlaced()
     }
 
     func canUpgradeBuilding(_ b: Building) -> Bool {
-        b.level < 3 && stock.canAfford(b.upgradeCost)
+        b.level < 3 && stock.canAfford(effectiveBuildingCost(b.upgradeCost))
     }
 
     func upgradeBuilding(id: UUID) {
         guard let i = buildings.firstIndex(where: { $0.id == id }) else { return }
         guard canUpgradeBuilding(buildings[i]) else { return }
-        stock = stock - buildings[i].upgradeCost
+        stock = stock - effectiveBuildingCost(buildings[i].upgradeCost)
         buildings[i].level += 1
     }
 
@@ -2032,6 +2087,7 @@ final class GameViewModel {
         updateFireFlashes(dt: dt)
         runDetection()
         runHealers(dt: dt)
+        runRaceRegen(dt: dt)
         bossAttackTowers(dt: dt)
         fireTowers(dt: dt, now: now)
         moveProjectiles(dt: dt)
@@ -2134,7 +2190,7 @@ final class GameViewModel {
                     heading: heading,
                     targetID: target.id,
                     damage: damage(of: towers[i]),
-                    speed: k.projectileSpeed,
+                    speed: k.projectileSpeed * (race?.projectileSpeedMultiplier ?? 1.0),
                     splashRadius: k.splashRadius,
                     color: k.color,
                     burnDPS: k.burnDPS,
@@ -2142,7 +2198,10 @@ final class GameViewModel {
                     slowFactor: k.slowFactor,
                     slowDuration: k.slowDuration,
                     freezeDuration: k.freezeDuration,
-                    chainTargets: k.chainTargets,
+                    // Sen signature: +1 chain target on existing chain astras.
+                    chainTargets: k.chainTargets > 0
+                        ? k.chainTargets + (race?.bonusChainTargets ?? 0)
+                        : 0,
                     damageType: k.damageType,
                     sourceTier: towers[i].tier,
                     sourceKind: k
@@ -2168,9 +2227,11 @@ final class GameViewModel {
         var best: Enemy? = nil
         var bestDistance: CGFloat = -1
         let r = range(of: tower)
+        let raceSeesInvisible = race?.revealsInvisible == true
         for e in enemies where e.hp > 0 {
             // Invisible enemies must be detected to be targetable
-            if e.kind.isInvisible && !e.detected { continue }
+            // (Gupta signature bypasses this for every tower.)
+            if e.kind.isInvisible && !e.detected && !raceSeesInvisible { continue }
             let d = hypot(e.position.x - tower.position.x, e.position.y - tower.position.y)
             if d <= r, e.distance > bestDistance {
                 bestDistance = e.distance
@@ -2243,6 +2304,16 @@ final class GameViewModel {
     }
 
     // Healers regenerate HP of any tower in range (during wave)
+    /// Ahom signature: passive tower HP regeneration while a wave is active.
+    private func runRaceRegen(dt: TimeInterval) {
+        guard isWaveActive else { return }
+        let regen = race?.towerRegenPerSec ?? 0
+        guard regen > 0 else { return }
+        for i in towers.indices where towers[i].hp < towers[i].maxHP {
+            towers[i].hp = min(towers[i].maxHP, towers[i].hp + regen * dt)
+        }
+    }
+
     private func runHealers(dt: TimeInterval) {
         guard isWaveActive else { return }
         let healers = towers.filter { $0.path == .sanjivani }
@@ -2311,7 +2382,9 @@ final class GameViewModel {
 
     private func applyEffects(index: Int, damage: Double, projectile: Projectile) {
         let immune = enemies[index].kind.immunities.contains(projectile.damageType)
-        let actualDamage = immune ? 0 : damage
+        // Raghuvansh signature: +50% damage to bosses.
+        let bossMult = enemies[index].kind.isBoss ? (race?.bossDamageBonus ?? 1.0) : 1.0
+        let actualDamage = immune ? 0 : damage * bossMult
         enemies[index].hp -= actualDamage
 
         if !immune {
@@ -2358,13 +2431,17 @@ final class GameViewModel {
         var scoreGain = 0
         var pointGain = 0
         var drops = Resources()
+        // Chola signature: +50% gold and Bazaar points per kill.
+        let rewardMult = race?.killRewardMultiplier ?? 1.0
         for e in enemies where e.hp <= 0 {
             if e.distance >= pathLength {
                 lifeLoss += 1
             } else {
-                drops.gold += e.kind.reward
-                scoreGain += e.kind.reward
-                pointGain += e.kind.bazaarPointReward
+                let goldReward = Int((Double(e.kind.reward) * rewardMult).rounded())
+                drops.gold += goldReward
+                scoreGain += goldReward
+                let ptReward = Int((Double(e.kind.bazaarPointReward) * rewardMult).rounded())
+                pointGain += ptReward
                 // Bonus resource drop (resource bearers reward big)
                 drops = drops + e.kind.resourceDrop
             }
