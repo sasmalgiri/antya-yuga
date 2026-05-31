@@ -1166,6 +1166,12 @@ enum EnemyKind: String, CaseIterable {
     case yantraPishacha  // tech bearer
     case taraDevi        // jotisha bearer
     case rishiAtma       // veda bearer
+    // Specialist demons — each demands a different astra mix
+    case raktabija       // heavy regen; only non-physical damage works
+    case tarakasura      // armored boss; fire + water bounce off
+    case bhasmasura      // fire incarnate; melts towers, fire-immune
+    case vritra          // drought serpent; water + ice useless
+    case putana          // disguised demoness; only divine damage works
 
     var displayName: String {
         switch self {
@@ -1183,6 +1189,11 @@ enum EnemyKind: String, CaseIterable {
         case .yantraPishacha: return "Yantra Pishacha"
         case .taraDevi:       return "Tara Devi"
         case .rishiAtma:      return "Rishi Atma"
+        case .raktabija:      return "Raktabija"
+        case .tarakasura:     return "Tarakasura"
+        case .bhasmasura:     return "Bhasmasura"
+        case .vritra:         return "Vritra"
+        case .putana:         return "Putana"
         }
     }
 
@@ -1202,6 +1213,11 @@ enum EnemyKind: String, CaseIterable {
         case .yantraPishacha: return 800
         case .taraDevi:       return 1000
         case .rishiAtma:      return 1700
+        case .raktabija:      return 1200
+        case .tarakasura:     return 2200
+        case .bhasmasura:     return 800
+        case .vritra:         return 3500
+        case .putana:         return 1100
         }
     }
 
@@ -1221,13 +1237,18 @@ enum EnemyKind: String, CaseIterable {
         case .yantraPishacha: return 50
         case .taraDevi:       return 45
         case .rishiAtma:      return 38
+        case .raktabija:      return 50
+        case .tarakasura:     return 36
+        case .bhasmasura:     return 60
+        case .vritra:         return 32
+        case .putana:         return 55
         }
     }
 
     /// Boss-tier flag — used for race signature damage bonuses.
     var isBoss: Bool {
         switch self {
-        case .mahishasura, .ravana, .indrajit: return true
+        case .mahishasura, .ravana, .indrajit, .tarakasura, .vritra: return true
         default: return false
         }
     }
@@ -1249,6 +1270,11 @@ enum EnemyKind: String, CaseIterable {
         case .yantraPishacha: return 4
         case .taraDevi:       return 5
         case .rishiAtma:      return 5
+        case .raktabija:      return 10
+        case .tarakasura:     return 22
+        case .bhasmasura:     return 8
+        case .vritra:         return 30
+        case .putana:         return 12
         }
     }
 
@@ -1268,6 +1294,11 @@ enum EnemyKind: String, CaseIterable {
         case .yantraPishacha: return 50
         case .taraDevi:       return 65
         case .rishiAtma:      return 75
+        case .raktabija:      return 120
+        case .tarakasura:     return 280
+        case .bhasmasura:     return 90
+        case .vritra:         return 400
+        case .putana:         return 140
         }
     }
 
@@ -1287,6 +1318,11 @@ enum EnemyKind: String, CaseIterable {
         case .yantraPishacha: return 20
         case .taraDevi:       return 23
         case .rishiAtma:      return 28
+        case .raktabija:      return 24
+        case .tarakasura:     return 34
+        case .bhasmasura:     return 22
+        case .vritra:         return 36
+        case .putana:         return 24
         }
     }
 
@@ -1306,6 +1342,11 @@ enum EnemyKind: String, CaseIterable {
         case .yantraPishacha: return .cyan
         case .taraDevi:       return .purple
         case .rishiAtma:      return .orange
+        case .raktabija:      return Color(red: 0.65, green: 0.05, blue: 0.10)   // blood-red
+        case .tarakasura:     return Color(red: 0.55, green: 0.25, blue: 0.10)   // rust armour
+        case .bhasmasura:     return Color(red: 0.35, green: 0.30, blue: 0.30)   // charcoal ash
+        case .vritra:         return Color(red: 0.10, green: 0.30, blue: 0.30)   // serpent teal
+        case .putana:         return Color(red: 0.30, green: 0.65, blue: 0.30)   // poison green
         }
     }
 
@@ -1325,10 +1366,21 @@ enum EnemyKind: String, CaseIterable {
         case .yantraPishacha: return "cpu.fill"
         case .taraDevi:       return "moon.stars.fill"
         case .rishiAtma:      return "book.closed.fill"
+        case .raktabija:      return "drop.fill"
+        case .tarakasura:     return "shield.lefthalf.filled"
+        case .bhasmasura:     return "flame.circle.fill"
+        case .vritra:         return "cloud.bolt.rain.fill"
+        case .putana:         return "leaf.fill"
         }
     }
 
-    var regenPerSec: Double { self == .vetala ? 10 : 0 }
+    var regenPerSec: Double {
+        switch self {
+        case .vetala:    return 10
+        case .raktabija: return 8   // signature: heavy blood regeneration
+        default:         return 0
+        }
+    }
 
     var immunities: Set<DamageType> {
         switch self {
@@ -1346,6 +1398,11 @@ enum EnemyKind: String, CaseIterable {
         case .yantraPishacha: return [.ice]                // machine — frozen circuits resist
         case .taraDevi:       return [.fire]               // starlight unburnt
         case .rishiAtma:      return [.physical]           // saintly soul, unphysical
+        case .raktabija:      return [.physical]           // blood demon — every drop spawns more; only elemental/divine works
+        case .tarakasura:     return [.fire, .water]       // forged armour quenches both
+        case .bhasmasura:     return [.fire]               // fire incarnate
+        case .vritra:         return [.water, .ice]        // serpent of drought; embodies absence of water
+        case .putana:         return [.physical, .fire, .water, .ice]  // only divine touch slays her
         }
     }
 
@@ -1358,7 +1415,7 @@ enum EnemyKind: String, CaseIterable {
 
     var attacksTowers: Bool {
         switch self {
-        case .mahishasura, .ravana, .indrajit: return true
+        case .mahishasura, .ravana, .indrajit, .tarakasura, .vritra, .bhasmasura: return true
         default: return false
         }
     }
@@ -1368,6 +1425,9 @@ enum EnemyKind: String, CaseIterable {
         case .mahishasura: return 35
         case .ravana:      return 80
         case .indrajit:    return 55
+        case .tarakasura:  return 50
+        case .vritra:      return 70
+        case .bhasmasura:  return 25
         default: return 0
         }
     }
@@ -1377,6 +1437,9 @@ enum EnemyKind: String, CaseIterable {
         case .mahishasura: return 1.0
         case .ravana:      return 0.8
         case .indrajit:    return 0.7
+        case .tarakasura:  return 0.9
+        case .vritra:      return 0.8
+        case .bhasmasura:  return 1.1
         default: return 0
         }
     }
@@ -1735,15 +1798,18 @@ final class GameViewModel {
             for _ in 0..<r { list.append((.rakshasa, interval)) }
 
         } else if n <= 8 {
-            // Mayavi now appears from W6 — sensory required earlier
+            // Mayavi now appears from W6 — sensory required earlier.
+            // Bhasmasura (fire-immune fast tower-burner) enters from W6 — forces ice/water/divine play.
             let p = 8 + n
             let r = 5 + (n - 4)
             let d = max(0, n - 5) * 2
             let m = max(0, n - 5)
+            let bh = max(0, n - 5)
             for _ in 0..<p { list.append((.pishacha, interval)) }
             for _ in 0..<r { list.append((.rakshasa, interval)) }
             for _ in 0..<d { list.append((.daitya, interval + 0.20)) }
             for _ in 0..<m { list.append((.mayavi, interval + 0.10)) }
+            for _ in 0..<bh { list.append((.bhasmasura, interval + 0.18)) }
             if n == 5 { list.append((.mahishasura, 1.4)) }
             if n == 6 { list.append((.mahishasura, 1.3)) }
             if n == 7 { list.append((.mahishasura, 1.2)); list.append((.daitya, 1.5)) }
@@ -1751,28 +1817,34 @@ final class GameViewModel {
 
         } else if n <= 12 {
             // Vetala (ice+water imm) + Mayavi (invisible) appear from W9+
-            // Sensory + multi-damage becomes mandatory
+            // Sensory + multi-damage becomes mandatory.
+            // Raktabija (phys-immune + regen) and Putana (divine-only) enter here.
             let p = 8 + n
             let r = 6 + (n - 8)
             let d = 3 + (n - 8)
             let v = max(0, n - 9)
             let m = max(0, n - 8) * 2   // invisible pressure
+            let bh = 1 + (n - 9)
+            let rb = max(0, n - 9)
             for _ in 0..<p { list.append((.pishacha, interval)) }
             for _ in 0..<r { list.append((.rakshasa, interval)) }
             for _ in 0..<d { list.append((.daitya, interval + 0.15)) }
             for _ in 0..<v { list.append((.vetala, interval + 0.15)) }
             for _ in 0..<m { list.append((.mayavi, interval + 0.10)) }
+            for _ in 0..<bh { list.append((.bhasmasura, interval + 0.18)) }
+            for _ in 0..<rb { list.append((.raktabija, interval + 0.25)) }
             if n == 9  { list.append((.mahishasura, 1.3)) }
             if n == 10 {
                 // First multi-boss wave: 2 Mahishasuras
                 list.append((.mahishasura, 1.1))
                 list.append((.mahishasura, 1.3))
             }
-            if n == 11 { list.append((.mahishasura, 1.2)) }
+            if n == 11 { list.append((.mahishasura, 1.2)); list.append((.putana, 1.7)) }
             if n == 12 {
                 // Mahisha + invisible Indrajit (forces sensory by now)
                 list.append((.mahishasura, 1.0))
                 list.append((.indrajit, 1.5))
+                list.append((.putana, 1.8))
             }
 
         } else if n <= 14 {
@@ -1789,9 +1861,9 @@ final class GameViewModel {
             for _ in 0..<a { list.append((.asura, interval + 0.18)) }
             for _ in 0..<v { list.append((.vetala, interval + 0.12)) }
             for _ in 0..<m { list.append((.mayavi, interval + 0.10)) }
-            // Mixed boss spawns
-            if n == 13 { list.append((.mahishasura, 1.2)); list.append((.indrajit, 1.4)) }
-            if n == 14 { list.append((.indrajit, 1.3)); list.append((.mahishasura, 1.2)) }
+            // Mixed boss spawns — Tarakasura (fire+water immune) debuts at W13
+            if n == 13 { list.append((.mahishasura, 1.2)); list.append((.indrajit, 1.4)); list.append((.tarakasura, 1.6)) }
+            if n == 14 { list.append((.indrajit, 1.3)); list.append((.mahishasura, 1.2)); list.append((.raktabija, 1.5)); list.append((.tarakasura, 1.7)) }
 
         } else if n <= 19 {
             // Bosses mixed into EVERY wave; Indrajit invisible boss recurring
@@ -1807,13 +1879,13 @@ final class GameViewModel {
             for _ in 0..<a { list.append((.asura, interval + 0.16)) }
             for _ in 0..<v { list.append((.vetala, interval + 0.12)) }
             for _ in 0..<m { list.append((.mayavi, interval + 0.10)) }
-            // Mixed multi-boss waves (every wave from W15)
+            // Mixed multi-boss waves (every wave from W15) — specialist demons mixed in
             switch n {
-            case 15: list.append((.mahishasura, 1.0)); list.append((.indrajit, 1.5))
+            case 15: list.append((.mahishasura, 1.0)); list.append((.indrajit, 1.5)); list.append((.tarakasura, 1.7))
             case 16: list.append((.mahishasura, 1.0)); list.append((.mahishasura, 1.2)); list.append((.ravana, 1.6))
-            case 17: list.append((.indrajit, 1.4)); list.append((.indrajit, 1.5))
-            case 18: list.append((.mahishasura, 1.0)); list.append((.ravana, 1.4)); list.append((.indrajit, 1.6))
-            case 19: list.append((.ravana, 1.2)); list.append((.mahishasura, 1.0)); list.append((.mahishasura, 1.2))
+            case 17: list.append((.indrajit, 1.4)); list.append((.indrajit, 1.5)); list.append((.raktabija, 1.6)); list.append((.raktabija, 1.8))
+            case 18: list.append((.mahishasura, 1.0)); list.append((.ravana, 1.4)); list.append((.indrajit, 1.6)); list.append((.tarakasura, 1.8))
+            case 19: list.append((.ravana, 1.2)); list.append((.mahishasura, 1.0)); list.append((.putana, 1.5)); list.append((.tarakasura, 1.7))
             default: break
             }
 
@@ -1831,17 +1903,22 @@ final class GameViewModel {
             for _ in 0..<a { list.append((.asura, interval + 0.16)) }
             for _ in 0..<v { list.append((.vetala, interval + 0.12)) }
             for _ in 0..<m { list.append((.mayavi, interval + 0.10)) }
-            // 3+ bosses per wave
+            // 3+ bosses per wave — Vritra (water+ice immune apex serpent) enters from W20
             list.append((.mahishasura, 1.0))
             list.append((.mahishasura, 1.2))
             list.append((.ravana, 1.4))
+            list.append((.tarakasura, 1.6))
+            list.append((.raktabija, 1.7))
+            list.append((.putana, 1.8))
             if n % 2 == 0 { list.append((.indrajit, 1.4)) }
             if n % 3 == 0 { list.append((.ravana, 1.2)) }
-            if n >= 25 { list.append((.indrajit, 1.2)) }
+            if n >= 20 { list.append((.vritra, 1.3)) }
+            if n >= 25 { list.append((.indrajit, 1.2)); list.append((.vritra, 1.5)) }
             if n >= 30 {
                 // Apocalyptic: 5+ bosses
                 list.append((.mahishasura, 1.0))
                 list.append((.ravana, 1.2))
+                list.append((.vritra, 1.4))
             }
         }
 

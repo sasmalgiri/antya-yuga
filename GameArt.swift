@@ -627,7 +627,70 @@ struct EnemyArtView: View {
         case .yantraPishacha: ResourceBearerArt(size: size, color: color, badge: "cpu.fill", badgeColor: .cyan)
         case .taraDevi:       ResourceBearerArt(size: size, color: color, badge: "moon.stars.fill", badgeColor: .purple)
         case .rishiAtma:      ResourceBearerArt(size: size, color: color, badge: "book.closed.fill", badgeColor: .orange)
+        case .raktabija:      SpecialistEnemyArt(size: size, color: color, badge: "drop.fill",                badgeColor: .red,    halo: true)
+        case .tarakasura:     SpecialistEnemyArt(size: size, color: color, badge: "shield.lefthalf.filled",  badgeColor: Color(red: 0.95, green: 0.50, blue: 0.10), halo: false)
+        case .bhasmasura:     SpecialistEnemyArt(size: size, color: color, badge: "flame.fill",              badgeColor: .orange, halo: true)
+        case .vritra:         SpecialistEnemyArt(size: size, color: color, badge: "cloud.bolt.rain.fill",    badgeColor: .cyan,   halo: false)
+        case .putana:         SpecialistEnemyArt(size: size, color: color, badge: "leaf.fill",               badgeColor: .green,  halo: true)
         }
+    }
+}
+
+/// Compact silhouette for the new specialist demons (Raktabija, Tarakasura,
+/// Bhasmasura, Vritra, Putana). A jagged hexagonal body + glowing SF Symbol
+/// badge identifies the immunity profile at a glance.
+struct SpecialistEnemyArt: View {
+    let size: CGFloat
+    let color: Color
+    let badge: String
+    let badgeColor: Color
+    /// If true, draw a pulsing aura ring to signal heavy regen or special trait.
+    let halo: Bool
+
+    var body: some View {
+        ZStack {
+            if halo {
+                Circle()
+                    .stroke(badgeColor.opacity(0.6), style: StrokeStyle(lineWidth: 1.2, dash: [4, 3]))
+                    .frame(width: size + 8, height: size + 8)
+            }
+            // Hex body
+            Path { p in
+                let r = size * 0.48
+                for i in 0..<6 {
+                    let a = .pi / 3.0 * Double(i) - .pi / 2
+                    let x = r * CGFloat(cos(a)) + size / 2
+                    let y = r * CGFloat(sin(a)) + size / 2
+                    if i == 0 { p.move(to: CGPoint(x: x, y: y)) }
+                    else      { p.addLine(to: CGPoint(x: x, y: y)) }
+                }
+                p.closeSubpath()
+            }
+            .fill(
+                RadialGradient(colors: [color.opacity(0.95), color.opacity(0.55)],
+                               center: .center, startRadius: 1, endRadius: size * 0.5)
+            )
+            .overlay(
+                Path { p in
+                    let r = size * 0.48
+                    for i in 0..<6 {
+                        let a = .pi / 3.0 * Double(i) - .pi / 2
+                        let x = r * CGFloat(cos(a)) + size / 2
+                        let y = r * CGFloat(sin(a)) + size / 2
+                        if i == 0 { p.move(to: CGPoint(x: x, y: y)) }
+                        else      { p.addLine(to: CGPoint(x: x, y: y)) }
+                    }
+                    p.closeSubpath()
+                }
+                .stroke(badgeColor.opacity(0.85), lineWidth: 1.5)
+            )
+            // Badge
+            Image(systemName: badge)
+                .font(.system(size: size * 0.45, weight: .heavy))
+                .foregroundColor(badgeColor)
+                .shadow(color: badgeColor.opacity(0.7), radius: 3)
+        }
+        .frame(width: size, height: size)
     }
 }
 

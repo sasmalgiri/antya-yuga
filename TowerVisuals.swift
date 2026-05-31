@@ -18,7 +18,66 @@ struct AstraTowerArt: View {
     // Disc diameter; weapon fits entirely inside
     private let diameter: CGFloat = 72
 
+    // Continuous animation for T3 cinematics (slow ring rotation + halo pulse).
+    @State private var t3Angle: Double = 0
+    @State private var t3Pulse: Double = 0
+
     var body: some View {
+        let isT3 = tower.tier >= 3
+        ZStack {
+            if isT3 { t3OuterHalo }
+            discContent
+            if isT3 { t3OrbitingParticles }
+        }
+        .onAppear {
+            // Driven once; .repeatForever animations keep it ticking after.
+            withAnimation(.linear(duration: 8).repeatForever(autoreverses: false)) {
+                t3Angle = 360
+            }
+            withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) {
+                t3Pulse = 1
+            }
+        }
+    }
+
+    // MARK: - T3 cinematic flourishes (drawn OUTSIDE the disc clip)
+
+    private var t3OuterHalo: some View {
+        ZStack {
+            // Soft halo bloom extending beyond the disc.
+            Circle()
+                .fill(RadialGradient(colors: [
+                    tower.kind.color.opacity(0.55 + 0.25 * t3Pulse),
+                    tower.kind.color.opacity(0.18),
+                    .clear
+                ], center: .center, startRadius: diameter * 0.45, endRadius: diameter * 0.78))
+                .frame(width: diameter * 1.6, height: diameter * 1.6)
+                .blendMode(.plusLighter)
+
+            // Rotating dashed gold ring just outside the disc.
+            Circle()
+                .stroke(LinearGradient(colors: [Color.yellow, tower.kind.color, Color.yellow],
+                                       startPoint: .leading, endPoint: .trailing),
+                        style: StrokeStyle(lineWidth: 1.1, dash: [4, 5]))
+                .frame(width: diameter * 1.10, height: diameter * 1.10)
+                .rotationEffect(.degrees(t3Angle))
+                .shadow(color: tower.kind.color.opacity(0.85), radius: 4)
+        }
+    }
+
+    private var t3OrbitingParticles: some View {
+        ForEach(0..<8, id: \.self) { i in
+            let baseAngle = Double(i) * 45.0
+            Circle()
+                .fill(Color.white)
+                .frame(width: 2.6, height: 2.6)
+                .shadow(color: tower.kind.color, radius: 4)
+                .offset(x: cos((baseAngle + t3Angle) * .pi / 180) * diameter * 0.58,
+                        y: sin((baseAngle + t3Angle) * .pi / 180) * diameter * 0.58)
+        }
+    }
+
+    private var discContent: some View {
         ZStack {
             // === YANTRA BACKGROUND ===
             // Dark filled disc with astra tint
@@ -122,7 +181,7 @@ struct AstraTowerArt: View {
                 }
             }
         }
-        // Frame matches disc exactly — nothing rendered outside
+        // Frame matches disc exactly — nothing rendered outside this layer
         .frame(width: diameter, height: diameter)
         .clipShape(Circle())
     }
