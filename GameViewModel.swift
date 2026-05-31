@@ -1194,7 +1194,7 @@ enum EnemyKind: String, CaseIterable {
     case bhasmasura      // fire incarnate; melts towers, fire-immune
     case vritra          // drought serpent; water + ice useless
     case putana          // disguised demoness; only divine damage works
-    case kalaAsura       // FINAL BOSS — only the Sudarshan Chakra can kill it
+    case kaliYuga       // FINAL BOSS — only the Sudarshan Chakra can kill it
 
     var displayName: String {
         switch self {
@@ -1217,7 +1217,7 @@ enum EnemyKind: String, CaseIterable {
         case .bhasmasura:     return "Bhasmasura"
         case .vritra:         return "Vritra"
         case .putana:         return "Putana"
-        case .kalaAsura:      return "Kala-Asura"
+        case .kaliYuga:      return "Kali Yuga"
         }
     }
 
@@ -1242,7 +1242,7 @@ enum EnemyKind: String, CaseIterable {
         case .bhasmasura:     return 800
         case .vritra:         return 3200
         case .putana:         return 1000
-        case .kalaAsura:      return 50000  // final boss — chakra is the realistic killer
+        case .kaliYuga:      return 50000  // final boss — chakra is the realistic killer
         }
     }
 
@@ -1267,14 +1267,14 @@ enum EnemyKind: String, CaseIterable {
         case .bhasmasura:     return 60
         case .vritra:         return 32
         case .putana:         return 55
-        case .kalaAsura:      return 22   // slow shambling apex; only moves when path is clear
+        case .kaliYuga:      return 22   // slow shambling apex; only moves when path is clear
         }
     }
 
     /// Boss-tier flag — used for race signature damage bonuses.
     var isBoss: Bool {
         switch self {
-        case .mahishasura, .ravana, .indrajit, .tarakasura, .vritra, .kalaAsura: return true
+        case .mahishasura, .ravana, .indrajit, .tarakasura, .vritra, .kaliYuga: return true
         default: return false
         }
     }
@@ -1301,7 +1301,7 @@ enum EnemyKind: String, CaseIterable {
         case .bhasmasura:     return 8
         case .vritra:         return 30
         case .putana:         return 12
-        case .kalaAsura:      return 200  // victory reward
+        case .kaliYuga:      return 200  // victory reward
         }
     }
 
@@ -1326,7 +1326,7 @@ enum EnemyKind: String, CaseIterable {
         case .bhasmasura:     return 90
         case .vritra:         return 400
         case .putana:         return 140
-        case .kalaAsura:      return 2000   // huge gold drop on victory
+        case .kaliYuga:      return 2000   // huge gold drop on victory
         }
     }
 
@@ -1351,7 +1351,7 @@ enum EnemyKind: String, CaseIterable {
         case .bhasmasura:     return 22
         case .vritra:         return 36
         case .putana:         return 24
-        case .kalaAsura:      return 50   // visually massive
+        case .kaliYuga:      return 50   // visually massive
         }
     }
 
@@ -1376,7 +1376,7 @@ enum EnemyKind: String, CaseIterable {
         case .bhasmasura:     return Color(red: 0.35, green: 0.30, blue: 0.30)   // charcoal ash
         case .vritra:         return Color(red: 0.10, green: 0.30, blue: 0.30)   // serpent teal
         case .putana:         return Color(red: 0.30, green: 0.65, blue: 0.30)   // poison green
-        case .kalaAsura:      return Color(red: 0.08, green: 0.05, blue: 0.18)   // void black
+        case .kaliYuga:      return Color(red: 0.08, green: 0.05, blue: 0.18)   // void black
         }
     }
 
@@ -1401,7 +1401,7 @@ enum EnemyKind: String, CaseIterable {
         case .bhasmasura:     return "flame.circle.fill"
         case .vritra:         return "cloud.bolt.rain.fill"
         case .putana:         return "leaf.fill"
-        case .kalaAsura:      return "crown.fill"
+        case .kaliYuga:      return "crown.fill"
         }
     }
 
@@ -1434,7 +1434,7 @@ enum EnemyKind: String, CaseIterable {
         case .bhasmasura:     return [.fire]               // fire incarnate
         case .vritra:         return [.water, .ice]        // serpent of drought; embodies absence of water
         case .putana:         return [.physical, .fire, .water, .ice]  // only divine touch slays her
-        case .kalaAsura:      return [.physical, .fire, .water, .ice]  // realistically only the chakra kills him
+        case .kaliYuga:      return [.physical, .fire, .water, .ice]  // realistically only the chakra kills him
         }
     }
 
@@ -1448,7 +1448,7 @@ enum EnemyKind: String, CaseIterable {
     var attacksTowers: Bool {
         switch self {
         case .mahishasura, .ravana, .indrajit, .tarakasura, .vritra,
-             .bhasmasura, .putana, .kalaAsura: return true
+             .bhasmasura, .putana, .kaliYuga: return true
         default: return false
         }
     }
@@ -1462,7 +1462,7 @@ enum EnemyKind: String, CaseIterable {
         case .vritra:      return 65
         case .bhasmasura:  return 25
         case .putana:      return 28   // siphon — heals self for this amount per hit
-        case .kalaAsura:   return 55   // strong but path-gated (won't move until tower dies)
+        case .kaliYuga:   return 55   // strong but path-gated (won't move until tower dies)
         default: return 0
         }
     }
@@ -1476,7 +1476,7 @@ enum EnemyKind: String, CaseIterable {
         case .vritra:      return 0.8
         case .bhasmasura:  return 1.1
         case .putana:      return 1.0
-        case .kalaAsura:   return 1.0
+        case .kaliYuga:   return 1.0
         default: return 0
         }
     }
@@ -1548,21 +1548,32 @@ final class GameViewModel {
     // MARK: - Sudarshan Chakra endgame
 
     enum SudarshanPhase: Int {
-        case inactive   // pre-Dvapara
-        case charging   // center tower visible, player feeds resources
-        case matured    // chakra spinning, final boss spawning, towers assimilated
-        case victory    // final boss defeated
+        case inactive       // pre-Dvapara
+        case charging       // center tower visible, player feeds resources
+        case matured        // chakra spinning, Kali Yuga walks the path
+        case rahuEclipse    // Kali Yuga first death → Rahu devours the Amrit Kalash
+        case empoweredBoss  // Kali Yuga reborn + Trimurti combined-astra charge phase
+        case victory        // empowered Kali Yuga finally falls
     }
 
     var sudarshanPhase: SudarshanPhase = .inactive
     /// 0..1 charge progress while .charging
     var sudarshanCharge: Double = 0
+    /// 0..1 charge progress for the Trimurti combined astra during empowered phase
+    var trimurtiCharge: Double = 0
+    /// Rahu eclipse animation timer (seconds left in .rahuEclipse)
+    var rahuTimer: TimeInterval = 0
+    static let rahuLifetime: TimeInterval = 3.2
     /// Center tower world position (lazily set when phase enters .charging)
     var sudarshanPosition: CGPoint = .zero
     /// Rotation angle for the chakra visual (driven by SwiftUI)
     var chakraAngle: Double = 0
-    /// Convenience accessor for the on-field Kala-Asura (the final boss).
-    var finalBoss: Enemy? { enemies.first(where: { $0.kind == .kalaAsura }) }
+    /// Convenience accessor for the on-field Kali Yuga (the final boss).
+    var finalBoss: Enemy? { enemies.first(where: { $0.kind == .kaliYuga }) }
+
+    /// Trimurti tap cost: combined-astra is twice as steep per tap as the Sudarshan.
+    static let trimurtiTapCost = Resources(gold: 600, metal: 60, tech: 60, jotisha: 60, veda: 60)
+    static let trimurtiTapProgress: Double = 0.125   // 8 taps fills the meter
 
     /// Resources required per "charge tap" — 10 taps fills the meter.
     static let sudarshanTapCost = Resources(gold: 300, metal: 30, tech: 30, jotisha: 30, veda: 30)
@@ -1697,15 +1708,60 @@ final class GameViewModel {
 
     /// Per-tick chakra logic. While .matured the chakra blasts every enemy on
     /// screen, with bonus damage to the final boss. Victory is detected in
-    /// cleanupEnemies when Kala-Asura's HP drops to zero.
+    /// cleanupEnemies when Kali Yuga's HP drops to zero.
     private func runSudarshanPhase(dt: TimeInterval) {
         guard sudarshanPhase == .matured else { return }
         chakraAngle = (chakraAngle + dt * 320).truncatingRemainder(dividingBy: 360)
         let baseDPS = 650.0
         for i in enemies.indices where enemies[i].hp > 0 {
-            let mult = enemies[i].kind == .kalaAsura ? 1.4 : 1.0
+            let mult = enemies[i].kind == .kaliYuga ? 1.4 : 1.0
             enemies[i].hp -= baseDPS * mult * dt
         }
+    }
+
+    /// Ages the Rahu eclipse and, when it ends, respawns Kali Yuga in an
+    /// empowered form for the final showdown.
+    private func runRahuPhase(dt: TimeInterval) {
+        guard sudarshanPhase == .rahuEclipse else { return }
+        rahuTimer -= dt
+        if rahuTimer <= 0 {
+            sudarshanPhase = .empoweredBoss
+            trimurtiCharge = 0
+            // Empowered respawn — 50% more HP, +45% tower damage.
+            let empoweredHP = 75000.0
+            var e = Enemy(kind: .kaliYuga,
+                          hp: empoweredHP,
+                          maxHP: empoweredHP,
+                          distance: 0,
+                          position: pathPoints.first ?? .zero,
+                          heading: CGPoint(x: 1, y: 0))
+            e.towerDamageOverride = 80
+            enemies.append(e)
+        }
+    }
+
+    /// Player taps to feed the Trimurti combined astra (Sudarshan + Brahmastra
+    /// + Trishul) during the .empoweredBoss phase. 8 taps fills the meter.
+    @discardableResult
+    func tapTrimurti() -> Bool {
+        guard sudarshanPhase == .empoweredBoss else { return false }
+        let cost = Self.trimurtiTapCost
+        guard stock.canAfford(cost) else { return false }
+        stock = stock - cost
+        trimurtiCharge = min(1.0, trimurtiCharge + Self.trimurtiTapProgress)
+        SoundEngine.shared.playBuildPlaced()
+        if trimurtiCharge >= 1.0 {
+            fireTrimurti()
+        }
+        return true
+    }
+
+    /// Discharges the Trimurti — instantly slays the empowered Kali Yuga.
+    private func fireTrimurti() {
+        for i in enemies.indices where enemies[i].kind == .kaliYuga {
+            enemies[i].hp = 0
+        }
+        SoundEngine.shared.playAgeUnlocked()
     }
 
     private var lastConfiguredSize: CGSize = .zero
@@ -2055,9 +2111,9 @@ final class GameViewModel {
 
         } else {
             // EXTREME: every wave has 3+ bosses
-            // FINAL: at wave 48, Kala-Asura debuts — only one ever spawned.
-            if n == 48, !enemies.contains(where: { $0.kind == .kalaAsura }) {
-                list.append((.kalaAsura, 0.6))
+            // FINAL: at wave 48, Kali Yuga debuts — only one ever spawned.
+            if n == 48, !enemies.contains(where: { $0.kind == .kaliYuga }) {
+                list.append((.kaliYuga, 0.6))
             }
             let p = 28 + n * 2
             let r = 20 + (n - 19)
@@ -2383,6 +2439,7 @@ final class GameViewModel {
         runRaceRegen(dt: dt)
         bossAttackTowers(dt: dt)
         runSudarshanPhase(dt: dt)
+        runRahuPhase(dt: dt)
         tryMatureIfReady()
         fireTowers(dt: dt, now: now)
         moveProjectiles(dt: dt)
@@ -2393,12 +2450,17 @@ final class GameViewModel {
     }
 
     private func generateResources(dt: TimeInterval) {
-        // Buildings only produce during active waves (work-time only)
-        guard isWaveActive else { return }
+        // Buildings only produce during active waves (work-time only) — except
+        // during the empowered-boss endgame, when the player NEEDS resources
+        // to charge the Trimurti, so the special endgame factories run 24/7
+        // at 2.5× rate.
+        let endgameOpen = sudarshanPhase == .empoweredBoss
+        guard isWaveActive || endgameOpen else { return }
+        let endgameBoost = endgameOpen ? 2.5 : 1.0
         for i in buildings.indices {
             // Vritra drought aura halts production entirely.
             if droughtBuildingIDs.contains(buildings[i].id) { continue }
-            let mult = race?.genMultiplier(for: buildings[i].kind.resource) ?? 1.0
+            let mult = (race?.genMultiplier(for: buildings[i].kind.resource) ?? 1.0) * endgameBoost
             buildings[i].partial += buildings[i].genPerSec * mult * dt
             if buildings[i].partial >= 1 {
                 let whole = Int(buildings[i].partial)
@@ -2458,11 +2520,11 @@ final class GameViewModel {
             if regen > 0, enemies[i].hp > 0 {
                 enemies[i].hp = min(enemies[i].maxHP, enemies[i].hp + regen * dt)
             }
-            // Kala-Asura is path-gated: he stays put as long as any tower is
+            // Kali Yuga is path-gated: he stays put as long as any tower is
             // within his attack reach. Only advances after killing the tower.
             var effectiveSpeed = enemies[i].kind.speed * enemies[i].slowFactor * enemies[i].speedMultiplier
                                  * CGFloat(rageMultiplier(of: enemies[i]))
-            if enemies[i].kind == .kalaAsura {
+            if enemies[i].kind == .kaliYuga {
                 let reach: CGFloat = 75
                 let hasTowerToKill = towers.contains { t in
                     hypot(t.position.x - enemies[i].position.x,
@@ -2919,10 +2981,17 @@ final class GameViewModel {
                 } else {
                     HapticsEngine.shared.enemyKilled()
                 }
-                // Final boss falling = the run is won.
-                if e.kind == .kalaAsura {
-                    sudarshanPhase = .victory
-                    HapticsEngine.shared.victory()
+                // Kali Yuga falls — but Rahu may intervene.
+                if e.kind == .kaliYuga {
+                    if sudarshanPhase == .matured {
+                        // First death → Rahu eclipse + revival.
+                        sudarshanPhase = .rahuEclipse
+                        rahuTimer = Self.rahuLifetime
+                    } else if sudarshanPhase == .empoweredBoss {
+                        // Second death → true victory.
+                        sudarshanPhase = .victory
+                        HapticsEngine.shared.victory()
+                    }
                 }
             }
         }
@@ -3087,6 +3156,8 @@ final class GameViewModel {
         droughtBuildingIDs.removeAll()
         sudarshanPhase = .inactive
         sudarshanCharge = 0
+        trimurtiCharge = 0
+        rahuTimer = 0
         chakraAngle = 0
         selectedSlotIndex = nil
         selectedTowerID = nil

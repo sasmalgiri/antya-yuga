@@ -392,7 +392,7 @@ final class SoundEngine: @unchecked Sendable {
         case .putana:
             // Cursed exhale — high to low whisper
             return SoundProfile(frequency: 900, duration: 0.22, waveform: .triangle, volume: 0.16, sweepTo: 220)
-        case .kalaAsura:
+        case .kaliYuga:
             // Apocalyptic boom — very low, very long, with sub-harmonic.
             return SoundProfile(frequency: 60, duration: 1.20, waveform: .sine, volume: 0.40, sweepTo: 20, harmonic: 35)
         }

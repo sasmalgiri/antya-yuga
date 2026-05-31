@@ -101,6 +101,17 @@ struct ContentView: View {
                 SudarshanChakraView(vm: vm)
                     .allowsHitTesting(false)
             }
+            // Rahu devours the Amrit Kalash and resurrects Kali Yuga.
+            if vm.sudarshanPhase == .rahuEclipse {
+                RahuEclipseOverlay(vm: vm)
+                    .allowsHitTesting(false)
+            }
+            // Empowered phase: Trimurti combined-astra charge UI.
+            if vm.sudarshanPhase == .empoweredBoss {
+                TrimurtiCenterTowerView(vm: vm)
+                    .position(vm.sudarshanPosition)
+                    .allowsHitTesting(true)
+            }
 
             if vm.sudarshanPhase == .victory {
                 VictoryOverlay(vm: vm)
@@ -2246,7 +2257,137 @@ struct SudarshanChakraView: View {
     }
 }
 
-/// Final victory screen — shown when Kala-Asura falls.
+/// Rahu intervenes: full-screen eclipse animation that plays for ~3 s while
+/// the Amrit Kalash is devoured and Kali Yuga is reborn empowered.
+struct RahuEclipseOverlay: View {
+    let vm: GameViewModel
+    @State private var angle: Double = 0
+
+    var body: some View {
+        let progress = max(0, min(1, 1.0 - vm.rahuTimer / GameViewModel.rahuLifetime))
+        ZStack {
+            Color.black.opacity(0.55 + 0.30 * progress).ignoresSafeArea()
+            // Eclipse — black disc covering a glowing corona
+            ZStack {
+                Circle()
+                    .fill(RadialGradient(colors: [
+                        Color.yellow.opacity(0.95),
+                        Color.orange.opacity(0.55),
+                        Color.red.opacity(0.25),
+                        .clear
+                    ], center: .center, startRadius: 60, endRadius: 220))
+                    .frame(width: 360, height: 360)
+                    .blendMode(.plusLighter)
+                Circle()
+                    .fill(Color.black)
+                    .frame(width: 220 + 30 * sin(angle * .pi / 180), height: 220 + 30 * sin(angle * .pi / 180))
+                    .shadow(color: .black, radius: 30)
+                // Rahu silhouette — a snarling SF symbol stand-in
+                Image(systemName: "moon.stars.fill")
+                    .font(.system(size: 90, weight: .heavy))
+                    .foregroundColor(.white.opacity(0.85))
+                    .shadow(color: .red, radius: 8)
+                    .rotationEffect(.degrees(angle * 0.5))
+            }
+            VStack(spacing: 8) {
+                Spacer()
+                Text("राहु ग्रहणम्")
+                    .font(.system(size: 26, weight: .heavy, design: .rounded))
+                    .foregroundColor(.yellow)
+                    .shadow(color: .black, radius: 4)
+                Text("Rahu devours the Amrit Kalash…")
+                    .font(.system(size: 14))
+                    .foregroundColor(.white.opacity(0.85))
+                Text("Kali Yuga is reborn empowered.")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.red)
+                    .padding(.bottom, 80)
+            }
+        }
+        .onAppear {
+            withAnimation(.linear(duration: GameViewModel.rahuLifetime).repeatCount(1)) {
+                angle = 360
+            }
+        }
+    }
+}
+
+/// Trimurti combined-astra charge UI — appears in .empoweredBoss phase
+/// at the same centre position as the Sudarshan disc. Higher-cost taps.
+struct TrimurtiCenterTowerView: View {
+    let vm: GameViewModel
+    @State private var pulse: Double = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        VStack(spacing: 6) {
+            ZStack {
+                Circle()
+                    .stroke(Color.red.opacity(0.25), lineWidth: 6)
+                    .frame(width: 104, height: 104)
+                Circle()
+                    .trim(from: 0, to: vm.trimurtiCharge)
+                    .stroke(
+                        AngularGradient(colors: [.red, .orange, .yellow, .white, .red],
+                                        center: .center),
+                        style: StrokeStyle(lineWidth: 6, lineCap: .round)
+                    )
+                    .frame(width: 104, height: 104)
+                    .rotationEffect(.degrees(-90))
+                Circle()
+                    .fill(RadialGradient(colors: [
+                        Color.red.opacity(0.65 + 0.25 * pulse),
+                        Color.orange.opacity(0.4),
+                        .black
+                    ], center: .center, startRadius: 4, endRadius: 44))
+                    .frame(width: 86, height: 86)
+                // Trimurti emblem — three weapons interlocked (simplified)
+                Image(systemName: "burst.fill")
+                    .font(.system(size: 34, weight: .heavy))
+                    .foregroundColor(.yellow)
+                    .shadow(color: .red, radius: 6)
+                Text(vm.trimurtiCharge >= 1.0 ? "Fire" : "\(Int(vm.trimurtiCharge * 100))%")
+                    .font(.system(size: 11, weight: .heavy, design: .rounded))
+                    .foregroundColor(.white)
+                    .offset(y: 38)
+                    .shadow(color: .black, radius: 2)
+            }
+            Button {
+                vm.tapTrimurti()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "flame.fill")
+                    Text("Charge Trimurti")
+                        .font(.system(size: 11, weight: .heavy, design: .rounded))
+                    Text("600g·60×4")
+                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 11)
+                .padding(.vertical, 5)
+                .background(
+                    Capsule().fill(LinearGradient(colors: [
+                        Color(red: 0.85, green: 0.12, blue: 0.12),
+                        Color(red: 0.55, green: 0.05, blue: 0.05)
+                    ], startPoint: .top, endPoint: .bottom))
+                )
+                .overlay(Capsule().stroke(Color.yellow.opacity(0.7), lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            Text("Sudarshan + Brahmastra + Trishul")
+                .font(.system(size: 8, weight: .semibold))
+                .foregroundColor(.white.opacity(0.65))
+        }
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
+                pulse = 1
+            }
+        }
+    }
+}
+
+/// Final victory screen — shown when Kali Yuga falls.
 struct VictoryOverlay: View {
     let vm: GameViewModel
 
