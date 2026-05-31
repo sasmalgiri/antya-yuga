@@ -1490,6 +1490,9 @@ final class GameViewModel {
     var isWaveActive: Bool = false
     var isGameOver: Bool = false
     var newAgeBanner: Age? = nil
+    /// Briefly visible at the start of every 7th wave so the player knows
+    /// dynamic resource bearers are inbound.
+    var resourceWaveBanner: Bool = false
     private var lastSeenAge: Age = .ancient
 
     var towers: [Tower] = []
@@ -1535,6 +1538,7 @@ final class GameViewModel {
     private var spawnQueue: [(EnemyKind, TimeInterval)] = []
     private var spawnTimer: TimeInterval = 0
     private var bannerTimer: TimeInterval = 0
+    private var resourceBannerTimer: TimeInterval = 0
 
     // MARK: - Race / setup
 
@@ -1811,6 +1815,11 @@ final class GameViewModel {
         isWaveActive = true
         spawnQueue = buildWave(wave)
         spawnTimer = 0
+        // Resource Wave banner (every 7th wave from W7 onward)
+        if wave % 7 == 0 && wave >= 7 {
+            resourceWaveBanner = true
+            resourceBannerTimer = 2.8
+        }
         SoundEngine.shared.playWaveStart()
     }
 
@@ -1997,29 +2006,48 @@ final class GameViewModel {
         for _ in 0..<p { list.append((.pishacha, interval + 0.05)) }
         for _ in 0..<r { list.append((.rakshasa, interval + 0.10)) }
 
-        // Resource bearers by tier
-        let bearers: [EnemyKind] = {
-            switch n {
-            case 7:   return [.lobhaYaksha, .yantraPishacha]                // gold + tech
-            case 14:  return [.lobhaYaksha, .lohaAsura, .taraDevi]          // gold + metal + jotisha
-            case 21:  return [.lohaAsura, .taraDevi, .rishiAtma]            // metal + jotisha + veda
-            case 28:  return [.lobhaYaksha, .lohaAsura, .yantraPishacha,
-                              .taraDevi, .rishiAtma]                        // all five
-            default:
-                // Higher boon waves (35, 42, 49...) — all bearers, more of each
-                return [.lobhaYaksha, .lobhaYaksha,
-                        .lohaAsura, .lohaAsura,
-                        .yantraPishacha, .yantraPishacha,
-                        .taraDevi, .taraDevi,
-                        .rishiAtma, .rishiAtma]
-            }
-        }()
-
-        for b in bearers {
-            list.append((b, 1.8))
+        // Dynamic resource bearers — count scales with wave, and the
+        // *mix* is weighted by which resources the player is shortest on.
+        let totalBearers = min(10, 2 + n / 7)   // W7: 3, W14: 4, W21: 5 … capped at 10
+        for kind in dynamicResourceBearers(count: totalBearers) {
+            list.append((kind, 1.8))
         }
 
         return list
+    }
+
+    /// Returns `count` bearer kinds, weighted by the inverse of the player's
+    /// current stock for that bearer's resource — so the resource you're
+    /// shortest on is most likely to spawn. Smoothed by a +25 floor so even
+    /// a flush wallet still has *some* chance of every bearer appearing.
+    private func dynamicResourceBearers(count: Int) -> [EnemyKind] {
+        struct Bearer { let kind: EnemyKind; let resource: ResourceKind }
+        let table: [Bearer] = [
+            Bearer(kind: .lobhaYaksha,    resource: .gold),
+            Bearer(kind: .lohaAsura,      resource: .metal),
+            Bearer(kind: .yantraPishacha, resource: .tech),
+            Bearer(kind: .taraDevi,       resource: .jotisha),
+            Bearer(kind: .rishiAtma,      resource: .veda)
+        ]
+        let weights = table.map { b -> Double in
+            // Lower stock → higher weight. +25 floor avoids div-by-zero
+            // and dampens swings when you're sitting on small piles.
+            1.0 / (Double(stock.amount(b.resource)) + 25.0)
+        }
+        let total = weights.reduce(0, +)
+        var picks: [EnemyKind] = []
+        picks.reserveCapacity(count)
+        for _ in 0..<count {
+            var r = Double.random(in: 0..<total)
+            for (i, w) in weights.enumerated() {
+                r -= w
+                if r <= 0 {
+                    picks.append(table[i].kind)
+                    break
+                }
+            }
+        }
+        return picks
     }
 
     // MARK: - Slot occupancy
@@ -2189,6 +2217,10 @@ final class GameViewModel {
         if bannerTimer > 0 {
             bannerTimer -= dt
             if bannerTimer <= 0 { newAgeBanner = nil }
+        }
+        if resourceBannerTimer > 0 {
+            resourceBannerTimer -= dt
+            if resourceBannerTimer <= 0 { resourceWaveBanner = false }
         }
 
         generateResources(dt: dt)
@@ -2793,6 +2825,8 @@ final class GameViewModel {
         isWaveActive = false
         isGameOver = false
         newAgeBanner = nil
+        resourceWaveBanner = false
+        resourceBannerTimer = 0
         lastSeenAge = .ancient
         unlockedAge = .ancient
         towers.removeAll()

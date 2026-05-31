@@ -82,6 +82,13 @@ struct ContentView: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
 
+            if vm.resourceWaveBanner {
+                ResourceWaveBanner()
+                    .padding(.top, 110)
+                    .frame(maxHeight: .infinity, alignment: .top)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+
             if vm.isGameOver {
                 GameOverOverlay(vm: vm)
             }
@@ -1438,6 +1445,40 @@ struct AgeBanner: View {
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(age.color, lineWidth: 1.5)
                 )
+        )
+    }
+}
+
+// MARK: - Resource wave banner
+
+struct ResourceWaveBanner: View {
+    var body: some View {
+        VStack(spacing: 4) {
+            Text("Resource Wave")
+                .font(.system(size: 18, weight: .heavy, design: .rounded))
+                .foregroundColor(.yellow)
+                .shadow(color: .black.opacity(0.7), radius: 2)
+            HStack(spacing: 8) {
+                ForEach(ResourceKind.allCases) { kind in
+                    Image(systemName: kind.symbol)
+                        .foregroundColor(kind.color)
+                        .font(.system(size: 13, weight: .bold))
+                }
+            }
+            Text("Bearers spawn weighted by your shortages")
+                .font(.system(size: 10))
+                .foregroundColor(.white.opacity(0.75))
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 9)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.black.opacity(0.82))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.yellow.opacity(0.85), lineWidth: 1.5)
+                )
+                .shadow(color: .yellow.opacity(0.55), radius: 6)
         )
     }
 }
