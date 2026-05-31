@@ -124,96 +124,169 @@ struct Resources: Equatable {
 
 enum Race: String, CaseIterable, Identifiable {
     case raghuvansh
-    case sen
-    case pal
     case maurya
+    case gupta
+    case pratihara
+    case rashtrakuta
+    case pal
+    case chola
+    case sen
+    case ahom
 
     var id: String { rawValue }
 
     var displayName: String {
         switch self {
-        case .raghuvansh: return "Raghuvansh"
-        case .sen:        return "Sen"
-        case .pal:        return "Pal"
-        case .maurya:     return "Maurya"
+        case .raghuvansh:  return "Raghuvansh"
+        case .maurya:      return "Maurya"
+        case .gupta:       return "Gupta"
+        case .pratihara:   return "Pratihara"
+        case .rashtrakuta: return "Rashtrakuta"
+        case .pal:         return "Pal"
+        case .chola:       return "Chola"
+        case .sen:         return "Sen"
+        case .ahom:        return "Ahom"
         }
     }
 
     var dynasty: String {
         switch self {
-        case .raghuvansh: return "Solar Dynasty"
-        case .sen:        return "Sena of Bengal"
-        case .pal:        return "Pala Empire"
-        case .maurya:     return "Mauryan Empire"
+        case .raghuvansh:  return "Solar Dynasty"
+        case .maurya:      return "Mauryan Empire"
+        case .gupta:       return "Gupta Empire"
+        case .pratihara:   return "Gurjara-Pratihara"
+        case .rashtrakuta: return "Rashtrakuta Empire"
+        case .pal:         return "Pala Empire"
+        case .chola:       return "Chola Empire"
+        case .sen:         return "Sena of Bengal"
+        case .ahom:        return "Ahom Kingdom"
         }
     }
 
     var description: String {
         switch self {
-        case .raghuvansh: return "Solar warriors of Ayodhya, lineage of Lord Rama"
-        case .sen:        return "Strategists of Bengal, masters of war science"
-        case .pal:        return "Patrons of dharma, knowledge, and craft"
-        case .maurya:     return "Imperial conquerors of Bharatvarsha"
+        case .raghuvansh:  return "Solar warriors of Ayodhya, lineage of Lord Rama"
+        case .maurya:      return "Imperial conquerors of Bharatvarsha"
+        case .gupta:       return "Golden Age of science, math, and astronomy"
+        case .pratihara:   return "Western shield-bearers, frontier defenders"
+        case .rashtrakuta: return "Temple builders of the Deccan"
+        case .pal:         return "Patrons of dharma, knowledge, and craft"
+        case .chola:       return "Maritime emperors, masters of the seas"
+        case .sen:         return "Strategists of Bengal, masters of war science"
+        case .ahom:        return "Unconquered hill kingdom of the northeast"
         }
     }
 
     var trait: String {
         switch self {
-        case .raghuvansh: return "+25% tower damage"
-        case .sen:        return "+20% tower range"
-        case .pal:        return "−10% gold cost on towers"
-        case .maurya:     return "+25% tower fire rate"
+        case .raghuvansh:  return "+25% tower damage"
+        case .maurya:      return "+25% tower fire rate"
+        case .gupta:       return "+20% tower damage"
+        case .pratihara:   return "+25% tower range"
+        case .rashtrakuta: return "+15% damage & +15% fire rate"
+        case .pal:         return "−10% gold cost on towers"
+        case .chola:       return "+20% tower fire rate"
+        case .sen:         return "+20% tower range"
+        case .ahom:        return "+20% tower range"
         }
     }
 
     var bonusGen: String {
         switch self {
-        case .raghuvansh: return "+30% Veda generation"
-        case .sen:        return "+20% all resource generation"
-        case .pal:        return "+40% Jotisha generation"
-        case .maurya:     return "+40% Metal generation"
+        case .raghuvansh:  return "+30% Veda generation"
+        case .maurya:      return "+40% Metal generation"
+        case .gupta:       return "+40% Tech generation"
+        case .pratihara:   return "+30% Gold generation"
+        case .rashtrakuta: return "+30% Metal generation"
+        case .pal:         return "+40% Jotisha generation"
+        case .chola:       return "+40% Gold generation"
+        case .sen:         return "+20% all resource generation"
+        case .ahom:        return "+30% Veda generation"
         }
     }
 
     var startingResources: Resources {
         switch self {
-        case .raghuvansh: return Resources(gold: 200, metal: 20, tech: 0,  jotisha: 10, veda: 10)
-        case .sen:        return Resources(gold: 190, metal: 15, tech: 25, jotisha: 10, veda: 0)
-        case .pal:        return Resources(gold: 220, metal: 15, tech: 15, jotisha: 35, veda: 8)
-        case .maurya:     return Resources(gold: 200, metal: 45, tech: 0,  jotisha: 10, veda: 0)
+        case .raghuvansh:  return Resources(gold: 200, metal: 20, tech: 0,  jotisha: 10, veda: 10)
+        case .maurya:      return Resources(gold: 200, metal: 45, tech: 0,  jotisha: 10, veda: 0)
+        case .gupta:       return Resources(gold: 200, metal: 15, tech: 35, jotisha: 10, veda: 5)
+        case .pratihara:   return Resources(gold: 260, metal: 20, tech: 0,  jotisha: 10, veda: 0)
+        case .rashtrakuta: return Resources(gold: 200, metal: 35, tech: 10, jotisha: 10, veda: 5)
+        case .pal:         return Resources(gold: 220, metal: 15, tech: 15, jotisha: 35, veda: 8)
+        case .chola:       return Resources(gold: 250, metal: 20, tech: 0,  jotisha: 10, veda: 0)
+        case .sen:         return Resources(gold: 190, metal: 15, tech: 25, jotisha: 10, veda: 0)
+        case .ahom:        return Resources(gold: 200, metal: 20, tech: 0,  jotisha: 10, veda: 25)
         }
     }
 
-    var damageMultiplier: Double { self == .raghuvansh ? 1.25 : 1.0 }
-    var rangeMultiplier: CGFloat { self == .sen ? 1.20 : 1.0 }
+    var damageMultiplier: Double {
+        switch self {
+        case .raghuvansh:  return 1.25
+        case .gupta:       return 1.20
+        case .rashtrakuta: return 1.15
+        default:           return 1.0
+        }
+    }
+
+    var rangeMultiplier: CGFloat {
+        switch self {
+        case .pratihara:   return 1.25
+        case .sen, .ahom:  return 1.20
+        default:           return 1.0
+        }
+    }
+
     var goldCostMultiplier: Double { self == .pal ? 0.90 : 1.0 }
-    var fireRateMultiplier: Double { self == .maurya ? 1.25 : 1.0 }
+
+    var fireRateMultiplier: Double {
+        switch self {
+        case .maurya:      return 1.25
+        case .chola:       return 1.20
+        case .rashtrakuta: return 1.15
+        default:           return 1.0
+        }
+    }
 
     func genMultiplier(for kind: ResourceKind) -> Double {
         switch (self, kind) {
-        case (.raghuvansh, .veda):    return 1.30
-        case (.sen,        _):        return 1.20  // generalist scholar — every resource
-        case (.pal,        .jotisha): return 1.40
-        case (.maurya,     .metal):   return 1.40
+        case (.raghuvansh,  .veda):    return 1.30
+        case (.maurya,      .metal):   return 1.40
+        case (.gupta,       .tech):    return 1.40
+        case (.pratihara,   .gold):    return 1.30
+        case (.rashtrakuta, .metal):   return 1.30
+        case (.pal,         .jotisha): return 1.40
+        case (.chola,       .gold):    return 1.40
+        case (.sen,         _):        return 1.20  // generalist scholar — every resource
+        case (.ahom,        .veda):    return 1.30
         default: return 1.0
         }
     }
 
     var color: Color {
         switch self {
-        case .raghuvansh: return .orange
-        case .sen:        return .blue
-        case .pal:        return Color(red: 0.78, green: 0.55, blue: 0.20)
-        case .maurya:     return .green
+        case .raghuvansh:  return .orange
+        case .maurya:      return .green
+        case .gupta:       return .yellow
+        case .pratihara:   return .red
+        case .rashtrakuta: return .purple
+        case .pal:         return Color(red: 0.78, green: 0.55, blue: 0.20)
+        case .chola:       return .cyan
+        case .sen:         return .blue
+        case .ahom:        return Color(red: 0.20, green: 0.65, blue: 0.35)
         }
     }
 
     var symbol: String {
         switch self {
-        case .raghuvansh: return "sun.max.fill"
-        case .sen:        return "shield.fill"
-        case .pal:        return "book.fill"
-        case .maurya:     return "crown.fill"
+        case .raghuvansh:  return "sun.max.fill"
+        case .maurya:      return "crown.fill"
+        case .gupta:       return "atom"
+        case .pratihara:   return "shield.checkered"
+        case .rashtrakuta: return "hammer.fill"
+        case .pal:         return "book.fill"
+        case .chola:       return "water.waves"
+        case .sen:         return "shield.fill"
+        case .ahom:        return "tree.fill"
         }
     }
 }
