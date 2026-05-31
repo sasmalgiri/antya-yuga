@@ -347,6 +347,11 @@ struct GameField: View {
                     .position(enemy.position)
                     .allowsHitTesting(false)
             }
+            // Floating damage numbers
+            ForEach(vm.damageNumbers) { dn in
+                DamageNumberView(number: dn)
+                    .allowsHitTesting(false)
+            }
         }
     }
 }
@@ -396,6 +401,7 @@ struct TowerView: View {
     var isDrained: Bool = false
 
     @State private var pulse: Double = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
@@ -486,6 +492,7 @@ struct TowerView: View {
             TowerArtView(tower: tower, selected: selected)
         }
         .onAppear {
+            guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 1.3).repeatForever(autoreverses: false)) {
                 pulse = 1
             }
@@ -573,6 +580,24 @@ struct EnemyView: View {
         ZStack {
             EnemyArtView(enemy: enemy)
                 .opacity(enemyAlpha)
+
+            // Micro HP bar — shown when wounded so the player can read remaining HP.
+            if enemy.hp > 0 && enemy.hp < enemy.maxHP {
+                let frac = max(0, min(1, enemy.hp / enemy.maxHP))
+                VStack(spacing: 0) {
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Color.black.opacity(0.55))
+                            .frame(width: size + 6, height: 4)
+                        Capsule()
+                            .fill(frac > 0.5 ? Color.green
+                                  : frac > 0.25 ? Color.yellow : Color.red)
+                            .frame(width: (size + 6) * CGFloat(frac), height: 4)
+                    }
+                    .overlay(Capsule().stroke(Color.white.opacity(0.5), lineWidth: 0.5))
+                }
+                .offset(y: -size * 0.6 - 4)
+            }
 
             if enemy.kind.isInvisible && enemy.detected {
                 // Detection ring (yellow)
@@ -709,6 +734,24 @@ struct TopHUD: View {
                         .padding(.vertical, 5)
                         .background(Color.black.opacity(0.55))
                         .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                // Game-speed toggle: 1× ↔ 2×
+                Button {
+                    vm.toggleGameSpeed()
+                } label: {
+                    HStack(spacing: 2) {
+                        Image(systemName: vm.gameSpeed >= 1.99 ? "forward.fill" : "play.fill")
+                            .font(.system(size: 10, weight: .semibold))
+                        Text(vm.gameSpeed >= 1.99 ? "2×" : "1×")
+                            .font(.system(size: 11, weight: .heavy, design: .rounded))
+                            .monospacedDigit()
+                    }
+                    .foregroundColor(vm.gameSpeed >= 1.99 ? .yellow : .cyan)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(Color.black.opacity(0.55))
+                    .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
                 pill(icon: vm.currentAge.symbol, color: vm.currentAge.color,
@@ -1935,6 +1978,7 @@ struct AmritaKalashButton: View {
     let vm: GameViewModel
     @State private var glow: Double = 0
     @State private var consumed: Bool = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Button {
@@ -1968,6 +2012,7 @@ struct AmritaKalashButton: View {
         // the button so a quick second tap can't double-spend 10 000 points.
         .disabled(consumed)
         .onAppear {
+            guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
                 glow = 1
             }
@@ -2062,12 +2107,37 @@ struct AmritaKalashButton: View {
     }
 }
 
+// MARK: - Floating damage number
+
+/// A short-lived "+50" / "120" text that drifts upward from a hit enemy.
+struct DamageNumberView: View {
+    let number: DamageNumber
+
+    var body: some View {
+        let progress = number.age / DamageNumber.lifetime
+        let drift = -28.0 * progress
+        let alpha = 1.0 - progress * 0.95
+        Text("\(number.value)")
+            .font(.system(size: number.isCrit ? 17 : 13,
+                          weight: number.isCrit ? .heavy : .bold,
+                          design: .rounded))
+            .monospacedDigit()
+            .foregroundColor(number.isCrit ? .yellow : .white)
+            .shadow(color: number.color.opacity(0.9), radius: 3)
+            .shadow(color: .black.opacity(0.7), radius: 1)
+            .position(x: number.position.x, y: number.position.y + drift - 8)
+            .opacity(alpha)
+            .scaleEffect(1.0 + (number.isCrit ? 0.25 : 0.10) * (1.0 - progress))
+    }
+}
+
 // MARK: - Sudarshan endgame views
 
 /// Inactive center tower that accepts resource taps to charge the chakra.
 struct SudarshanCenterTowerView: View {
     let vm: GameViewModel
     @State private var pulse: Double = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 6) {
@@ -2129,6 +2199,7 @@ struct SudarshanCenterTowerView: View {
             .disabled(vm.sudarshanCharge >= 1.0 && vm.finalBoss == nil)
         }
         .onAppear {
+            guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) {
                 pulse = 1
             }

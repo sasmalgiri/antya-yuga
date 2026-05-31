@@ -52,6 +52,12 @@ final class SoundEngine: @unchecked Sendable {
     private(set) var isMuted: Bool = false
     private var lastPlayTime: [String: TimeInterval] = [:]
 
+    // Background music
+    private let musicPlayer = AVAudioPlayerNode()
+    private let musicMixer  = AVAudioMixerNode()
+    private var musicBuffer: AVAudioPCMBuffer? = nil
+    private var currentMusicAgeRaw: Int = -1
+
     // TTS for slokas
     private let speech = AVSpeechSynthesizer()
     private var lastSlokaAt: [SlokaEvent: TimeInterval] = [:]
@@ -77,6 +83,13 @@ final class SoundEngine: @unchecked Sendable {
             players.append(p)
         }
 
+        // Music chain — separate mixer so we can keep it quiet under SFX.
+        engine.attach(musicMixer)
+        engine.attach(musicPlayer)
+        engine.connect(musicMixer, to: engine.mainMixerNode, format: format)
+        engine.connect(musicPlayer, to: musicMixer, format: format)
+        musicMixer.outputVolume = 0.18
+
         do {
             try engine.start()
         } catch {
@@ -87,6 +100,7 @@ final class SoundEngine: @unchecked Sendable {
     func setMuted(_ muted: Bool) {
         isMuted = muted
         if muted {
+            stopMusic()
             let synth = self.speech
             DispatchQueue.global(qos: .userInitiated).async {
                 synth.stopSpeaking(at: .immediate)
@@ -442,6 +456,55 @@ final class SoundEngine: @unchecked Sendable {
             return rel
         }
         return 1.0
+    }
+
+    // MARK: - Background music (procedural drone per Yuga)
+
+    /// Plays a calm sustained drone whose root pitch tracks the player's
+    /// current age. Loops seamlessly until stopped or `setMusicAge` swaps it.
+    func setMusicAge(_ age: Age) {
+        guard enabled, !isMuted else { return }
+        guard age.rawValue != currentMusicAgeRaw else { return }
+        currentMusicAgeRaw = age.rawValue
+        // Drone root frequencies — calm, low, dharmic
+        let root: Double
+        switch age {
+        case .ancient: root = 110.0   // A2
+        case .middle:  root = 146.83  // D3 — brighter age
+        case .modern:  root = 164.81  // E3 — most intense
+        }
+        let duration: Double = 4.0   // 4-second seamless loop
+        let buffer = renderDrone(root: root, fifth: root * 1.5, duration: duration)
+        musicBuffer = buffer
+        musicPlayer.stop()
+        musicPlayer.scheduleBuffer(buffer, at: nil, options: [.loops], completionHandler: nil)
+        if !musicPlayer.isPlaying { musicPlayer.play() }
+    }
+
+    func stopMusic() {
+        musicPlayer.stop()
+        currentMusicAgeRaw = -1
+    }
+
+    /// Two-voice drone — root + perfect fifth — mixed at low level.
+    private func renderDrone(root: Double, fifth: Double, duration: Double) -> AVAudioPCMBuffer {
+        let sampleRate: Double = 44100
+        let frameCount = AVAudioFrameCount(duration * sampleRate)
+        let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount)!
+        buffer.frameLength = frameCount
+        let data = buffer.floatChannelData![0]
+        let total = Int(frameCount)
+        for i in 0..<total {
+            let t = Double(i) / sampleRate
+            // Gentle 0.5 Hz amplitude wobble for organic feel.
+            let wob = 0.85 + 0.15 * sin(2 * .pi * 0.5 * t)
+            let s1 = sin(2 * .pi * root * t)
+            let s2 = sin(2 * .pi * fifth * t)
+            let s3 = sin(2 * .pi * root * 2 * t) * 0.35  // octave shimmer
+            let mix = (s1 + s2 * 0.6 + s3) / 2.0
+            data[i] = Float(mix * wob * 0.25)
+        }
+        return buffer
     }
 
     private func configureAudioSession() {

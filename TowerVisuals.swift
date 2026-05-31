@@ -21,6 +21,7 @@ struct AstraTowerArt: View {
     // Continuous animation for T3 cinematics (slow ring rotation + halo pulse).
     @State private var t3Angle: Double = 0
     @State private var t3Pulse: Double = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let isT3 = tower.tier >= 3
@@ -30,7 +31,8 @@ struct AstraTowerArt: View {
             if isT3 { t3OrbitingParticles }
         }
         .onAppear {
-            // Driven once; .repeatForever animations keep it ticking after.
+            // Reduce Motion users get a static T3 disc — no rotation or pulse.
+            guard !reduceMotion else { return }
             withAnimation(.linear(duration: 8).repeatForever(autoreverses: false)) {
                 t3Angle = 360
             }

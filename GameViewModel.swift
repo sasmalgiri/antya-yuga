@@ -1148,6 +1148,17 @@ struct FireFlash: Identifiable {
     static let lifetime: TimeInterval = 0.25
 }
 
+/// Floating damage number that pops off an enemy on hit and drifts upward.
+struct DamageNumber: Identifiable {
+    let id = UUID()
+    let value: Int
+    let position: CGPoint
+    let color: Color
+    let isCrit: Bool
+    var age: TimeInterval = 0
+    static let lifetime: TimeInterval = 0.65
+}
+
 /// A jagged "lightning" bolt drawn from a boss enemy to a tower it just hit.
 /// Renders for a short flash then fades out.
 struct BossAttackFlash: Identifiable {
@@ -1513,6 +1524,7 @@ final class GameViewModel {
     var enemies: [Enemy] = []
     var projectiles: [Projectile] = []
     var fireFlashes: [FireFlash] = []
+    var damageNumbers: [DamageNumber] = []
     var slots: [BuildSlot] = []
 
     // Per-tick effect tracking — read by the view layer to draw auras and bolts.
@@ -1588,6 +1600,7 @@ final class GameViewModel {
         lives = 18 + BazaarStore.shared.bonusStartingLives
         activeBazaarPerks.removeAll()
         points = 0
+        SoundEngine.shared.setMusicAge(.ancient)
     }
 
     var unlockedAge: Age = .ancient
@@ -1631,6 +1644,7 @@ final class GameViewModel {
             beginSudarshanPhase()
         }
         SoundEngine.shared.playAgeUnlocked()
+        SoundEngine.shared.setMusicAge(next)
     }
 
     // MARK: - Sudarshan Chakra endgame logic
@@ -2320,6 +2334,12 @@ final class GameViewModel {
     // MARK: - Game loop
 
     var isPaused: Bool = false
+    /// 1.0 = normal, 2.0 = fast-forward. Multiplied into dt each tick.
+    var gameSpeed: Double = 1.0
+
+    func toggleGameSpeed() {
+        gameSpeed = gameSpeed >= 1.99 ? 1.0 : 2.0
+    }
 
     func update(now: TimeInterval) {
         guard !isGameOver, race != nil else { return }
@@ -2329,14 +2349,17 @@ final class GameViewModel {
             return
         }
 
-        let dt: TimeInterval
+        let rawDt: TimeInterval
         if let last = lastUpdate {
-            dt = min(0.05, now - last)
+            rawDt = min(0.05, now - last)
         } else {
-            dt = 0
+            rawDt = 0
         }
         lastUpdate = now
-        guard dt > 0 else { return }
+        guard rawDt > 0 else { return }
+        // Apply 1×/2× fast-forward to the gameplay clock (UI animations keep
+        // their wall-clock cadence). Capped at 0.10s/tick to stay stable.
+        let dt = min(0.10, rawDt * gameSpeed)
 
         if bannerTimer > 0 {
             bannerTimer -= dt
@@ -2352,6 +2375,7 @@ final class GameViewModel {
         updateEnemies(dt: dt)
         updateFireFlashes(dt: dt)
         updateBossAttackFlashes(dt: dt)
+        updateDamageNumbers(dt: dt)
         runDetection()
         runHealers(dt: dt)
         runShieldTracking()
@@ -2503,6 +2527,7 @@ final class GameViewModel {
                                               color: k.color,
                                               damageType: k.damageType))
                 SoundEngine.shared.playFire(for: k, now: now)
+                HapticsEngine.shared.towerFire()
             }
         }
     }
@@ -2516,6 +2541,11 @@ final class GameViewModel {
     private func updateBossAttackFlashes(dt: TimeInterval) {
         for i in bossAttackFlashes.indices { bossAttackFlashes[i].age += dt }
         bossAttackFlashes.removeAll { $0.age >= BossAttackFlash.lifetime }
+    }
+
+    private func updateDamageNumbers(dt: TimeInterval) {
+        for i in damageNumbers.indices { damageNumbers[i].age += dt }
+        damageNumbers.removeAll { $0.age >= DamageNumber.lifetime }
     }
 
     private func pickTarget(for tower: Tower) -> Enemy? {
@@ -2798,6 +2828,7 @@ final class GameViewModel {
         // Raghuvansh signature: +50% damage to bosses.
         let bossMult = enemies[index].kind.isBoss ? (race?.bossDamageBonus ?? 1.0) : 1.0
         var actualDamage = immune ? 0 : damage * bossMult
+        let wasBossHit = enemies[index].kind.isBoss
         // Tarakasura adamantine armor — ignore single hits below 35 damage.
         // Forces T2+ astras (or T1 + a Chuni stone) to hurt him.
         if enemies[index].kind == .tarakasura, actualDamage > 0, actualDamage < 35 {
@@ -2810,6 +2841,19 @@ final class GameViewModel {
             actualDamage = 0
         }
         enemies[index].hp -= actualDamage
+
+        // Floating damage number — caps the array so it never grows unbounded.
+        if actualDamage >= 1 {
+            damageNumbers.append(DamageNumber(
+                value: Int(actualDamage.rounded()),
+                position: enemies[index].position,
+                color: projectile.color,
+                isCrit: wasBossHit && bossMult > 1.0
+            ))
+            if damageNumbers.count > 50 {
+                damageNumbers.removeFirst(damageNumbers.count - 50)
+            }
+        }
 
         if !immune {
             if projectile.burnDuration > 0 {
@@ -2870,9 +2914,15 @@ final class GameViewModel {
                 drops = drops + e.kind.resourceDrop
                 // Kind-specific death sound; bosses also trigger a victory sloka.
                 SoundEngine.shared.playEnemyDeath(kind: e.kind)
+                if e.kind.isBoss {
+                    HapticsEngine.shared.bossKilled()
+                } else {
+                    HapticsEngine.shared.enemyKilled()
+                }
                 // Final boss falling = the run is won.
                 if e.kind == .kalaAsura {
                     sudarshanPhase = .victory
+                    HapticsEngine.shared.victory()
                 }
             }
         }
@@ -2914,6 +2964,7 @@ final class GameViewModel {
             if !isGameOver {
                 isGameOver = true
                 SoundEngine.shared.playGameOver()
+                HapticsEngine.shared.gameOver()
             }
         }
     }
@@ -2946,6 +2997,7 @@ final class GameViewModel {
         guard payPoints(Self.amritaKalashCost) else { return false }
         lives += Self.amritaKalashLifeGain
         SoundEngine.shared.playAmritaKalash()
+        HapticsEngine.shared.amritaKalashUsed()
         return true
     }
 
@@ -3024,6 +3076,7 @@ final class GameViewModel {
         enemies.removeAll()
         projectiles.removeAll()
         fireFlashes.removeAll()
+        damageNumbers.removeAll()
         bossAttackFlashes.removeAll()
         protectedTowerIDs.removeAll()
         healedTowerIDs.removeAll()
