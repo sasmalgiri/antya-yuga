@@ -2377,6 +2377,26 @@ struct TrimurtiCenterTowerView: View {
             Text("Sudarshan + Brahmastra + Trishul")
                 .font(.system(size: 8, weight: .semibold))
                 .foregroundColor(.white.opacity(0.65))
+
+            // Sudarshan HP bar — the relic itself takes hits when every
+            // other defence has fallen. If it empties, the run is lost.
+            let frac = max(0, min(1, vm.sudarshanHP / vm.sudarshanMaxHP))
+            VStack(spacing: 1) {
+                Text("Sudarshan \(Int(vm.sudarshanHP))/\(Int(vm.sudarshanMaxHP))")
+                    .font(.system(size: 8, weight: .semibold, design: .rounded))
+                    .foregroundColor(.white.opacity(0.85))
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.black.opacity(0.6))
+                        .frame(width: 120, height: 6)
+                    Capsule()
+                        .fill(frac > 0.5 ? Color.yellow
+                              : frac > 0.25 ? Color.orange : Color.red)
+                        .frame(width: 120 * CGFloat(frac), height: 6)
+                }
+                .overlay(Capsule().stroke(Color.white.opacity(0.55), lineWidth: 0.6))
+            }
+            .padding(.top, 4)
         }
         .onAppear {
             guard !reduceMotion else { return }

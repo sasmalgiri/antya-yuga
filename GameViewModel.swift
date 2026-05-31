@@ -1579,6 +1579,11 @@ final class GameViewModel {
     /// so the player feels each contribution land.
     static let trimurtiTapChipDamage: Double = 3500
 
+    /// HP pool for the Sudarshan center tower itself — only attackable once
+    /// every other defence has fallen during the empowered phase.
+    var sudarshanHP: Double = 600
+    var sudarshanMaxHP: Double = 600
+
     /// Resources required per "charge tap" — 10 taps fills the meter.
     static let sudarshanTapCost = Resources(gold: 300, metal: 30, tech: 30, jotisha: 30, veda: 30)
     static let sudarshanTapProgress: Double = 0.10
@@ -1667,6 +1672,7 @@ final class GameViewModel {
     private func beginSudarshanPhase() {
         sudarshanPhase = .charging
         sudarshanCharge = 0
+        sudarshanHP = sudarshanMaxHP
         // Center of the playfield, with a slight upward bias so the icon
         // sits in the visual middle and is reachable on iPad too.
         sudarshanPosition = CGPoint(x: lastConfiguredSize.width / 2,
@@ -2538,6 +2544,23 @@ final class GameViewModel {
             // within his attack reach. Only advances after killing the tower.
             var effectiveSpeed = enemies[i].kind.speed * enemies[i].slowFactor * enemies[i].speedMultiplier
                                  * CGFloat(rageMultiplier(of: enemies[i]))
+            // Empowered Kali Yuga abandons the path entirely once every tower
+            // AND every building is gone — he marches straight for the
+            // Sudarshan to finish the player off.
+            if enemies[i].kind == .kaliYuga,
+               sudarshanPhase == .empoweredBoss,
+               towers.isEmpty, buildings.isEmpty {
+                let dx = sudarshanPosition.x - enemies[i].position.x
+                let dy = sudarshanPosition.y - enemies[i].position.y
+                let dist = hypot(dx, dy)
+                if dist > 30 {
+                    let v: CGFloat = 28 * enemies[i].slowFactor
+                    enemies[i].position.x += (dx / dist) * v * CGFloat(dt)
+                    enemies[i].position.y += (dy / dist) * v * CGFloat(dt)
+                    enemies[i].heading = CGPoint(x: dx / dist, y: dy / dist)
+                }
+                continue   // skip normal path advance & wrap
+            }
             if enemies[i].kind == .kaliYuga {
                 let reach: CGFloat = 75
                 let hasTowerToKill = towers.contains { t in
@@ -2697,6 +2720,30 @@ final class GameViewModel {
                     let cap = enemies[i].maxHP
                     enemies[i].hp = min(cap, enemies[i].hp + dmg)
                     drainedTowerIDs.insert(towers[ti].id)
+                }
+            } else if enemies[i].kind == .kaliYuga,
+                      sudarshanPhase == .empoweredBoss {
+                // Last line — empowered Kali Yuga reaches the Sudarshan and
+                // gnaws on the central relic itself.
+                let d = hypot(sudarshanPosition.x - enemies[i].position.x,
+                              sudarshanPosition.y - enemies[i].position.y)
+                if d < 80 {
+                    let baseDmg = enemies[i].towerDamageOverride > 0
+                        ? enemies[i].towerDamageOverride
+                        : enemies[i].kind.towerDamage
+                    let dmg = baseDmg * rageMultiplier(of: enemies[i])
+                    sudarshanHP = max(0, sudarshanHP - dmg)
+                    enemies[i].attackCooldown = enemies[i].kind.attackInterval
+                    bossAttackFlashes.append(BossAttackFlash(
+                        from: enemies[i].position,
+                        to: sudarshanPosition,
+                        color: enemies[i].kind.color
+                    ))
+                    if sudarshanHP <= 0 && !isGameOver {
+                        isGameOver = true
+                        SoundEngine.shared.playGameOver()
+                        HapticsEngine.shared.gameOver()
+                    }
                 }
             }
         }
@@ -3173,6 +3220,7 @@ final class GameViewModel {
         trimurtiCharge = 0
         rahuTimer = 0
         chakraAngle = 0
+        sudarshanHP = sudarshanMaxHP
         selectedSlotIndex = nil
         selectedTowerID = nil
         selectedBuildingID = nil
