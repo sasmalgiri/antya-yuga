@@ -143,10 +143,11 @@ struct PointBundle: Identifiable, Hashable {
     let highlight: Bool
 
     /// A single consumable point pack — re-purchasable any number of times.
-    /// Price is a placeholder; Apple's real localized price replaces it once
-    /// StoreKit loads the product from App Store Connect.
+    /// $0.99 is Apple's lowest universal price tier (Tier 1); the real
+    /// localized price replaces this placeholder once StoreKit loads the
+    /// product from App Store Connect.
     static let all: [PointBundle] = [
-        PointBundle(id: "pack.small", grant: 50, priceTag: "$0.09", label: "Starter Pack", highlight: true)
+        PointBundle(id: "pack.small", grant: 250, priceTag: "$0.99", label: "Starter Pack", highlight: true)
     ]
 }
 
