@@ -1620,6 +1620,15 @@ final class GameViewModel {
         lives = 18 + BazaarStore.shared.bonusStartingLives
         activeBazaarPerks.removeAll()
         points = 0
+        // Defensive: reset any lingering endgame state from a previous run
+        // that might have skipped fullReset (e.g., race-change without a
+        // game-over). reset() is the canonical clear; selectRace just
+        // covers the residual case.
+        sudarshanPhase = .inactive
+        sudarshanCharge = 0
+        trimurtiCharge = 0
+        rahuTimer = 0
+        sudarshanHP = sudarshanMaxHP
         SoundEngine.shared.setMusicAge(.ancient)
     }
 
@@ -1673,10 +1682,16 @@ final class GameViewModel {
         sudarshanPhase = .charging
         sudarshanCharge = 0
         sudarshanHP = sudarshanMaxHP
-        // Center of the playfield, with a slight upward bias so the icon
-        // sits in the visual middle and is reachable on iPad too.
-        sudarshanPosition = CGPoint(x: lastConfiguredSize.width / 2,
-                                    y: lastConfiguredSize.height / 2)
+        // Center of the playfield. If `reconfigure(size:)` somehow hasn't
+        // fired yet (lastConfiguredSize is .zero), fall back to a sensible
+        // iPad-sized default so the divert-to-Sudarshan logic doesn't aim
+        // at (0, 0).
+        if lastConfiguredSize.width > 0 && lastConfiguredSize.height > 0 {
+            sudarshanPosition = CGPoint(x: lastConfiguredSize.width / 2,
+                                        y: lastConfiguredSize.height / 2)
+        } else {
+            sudarshanPosition = CGPoint(x: 512, y: 384)
+        }
     }
 
     /// Returns true if the tap was accepted (had resources, advanced charge).
@@ -2546,10 +2561,12 @@ final class GameViewModel {
                                  * CGFloat(rageMultiplier(of: enemies[i]))
             // Empowered Kali Yuga abandons the path entirely once every tower
             // AND every building is gone — he marches straight for the
-            // Sudarshan to finish the player off.
+            // Sudarshan to finish the player off. Guard against an
+            // uninitialised sudarshanPosition (which would point at 0,0).
             if enemies[i].kind == .kaliYuga,
                sudarshanPhase == .empoweredBoss,
-               towers.isEmpty, buildings.isEmpty {
+               towers.isEmpty, buildings.isEmpty,
+               sudarshanPosition.x > 0 || sudarshanPosition.y > 0 {
                 let dx = sudarshanPosition.x - enemies[i].position.x
                 let dy = sudarshanPosition.y - enemies[i].position.y
                 let dist = hypot(dx, dy)
