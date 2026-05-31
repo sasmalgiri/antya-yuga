@@ -56,6 +56,10 @@ final class SoundEngine: @unchecked Sendable {
     private let musicPlayer = AVAudioPlayerNode()
     private let musicMixer  = AVAudioMixerNode()
     private var musicBuffer: AVAudioPCMBuffer? = nil
+    /// What age the player is actually in. Persists across mute so we can
+    /// resume the same drone on unmute.
+    private var desiredMusicAgeRaw: Int = -1
+    /// What age is actively playing right now (-1 = silent).
     private var currentMusicAgeRaw: Int = -1
 
     // TTS for slokas
@@ -100,10 +104,17 @@ final class SoundEngine: @unchecked Sendable {
     func setMuted(_ muted: Bool) {
         isMuted = muted
         if muted {
-            stopMusic()
+            // Stop playback but keep desiredMusicAgeRaw so we can resume.
+            musicPlayer.stop()
+            currentMusicAgeRaw = -1
             let synth = self.speech
             DispatchQueue.global(qos: .userInitiated).async {
                 synth.stopSpeaking(at: .immediate)
+            }
+        } else {
+            // Unmute → resume the music we were on, if any.
+            if desiredMusicAgeRaw >= 0, let age = Age(rawValue: desiredMusicAgeRaw) {
+                setMusicAge(age)
             }
         }
     }
@@ -463,6 +474,9 @@ final class SoundEngine: @unchecked Sendable {
     /// Plays a calm sustained drone whose root pitch tracks the player's
     /// current age. Loops seamlessly until stopped or `setMusicAge` swaps it.
     func setMusicAge(_ age: Age) {
+        // Always remember the desired age — even if muted, so unmute resumes
+        // the right drone instead of silence.
+        desiredMusicAgeRaw = age.rawValue
         guard enabled, !isMuted else { return }
         guard age.rawValue != currentMusicAgeRaw else { return }
         currentMusicAgeRaw = age.rawValue
@@ -484,6 +498,7 @@ final class SoundEngine: @unchecked Sendable {
     func stopMusic() {
         musicPlayer.stop()
         currentMusicAgeRaw = -1
+        desiredMusicAgeRaw = -1   // hard stop — won't resume on unmute
     }
 
     /// Two-voice drone — root + perfect fifth — mixed at low level.
