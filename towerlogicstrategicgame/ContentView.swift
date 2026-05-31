@@ -280,7 +280,10 @@ struct GameField: View {
                     tower: tower,
                     selected: vm.selectedTowerID == tower.id,
                     isProtected: vm.protectedTowerIDs.contains(tower.id),
-                    isBeingHealed: vm.healedTowerIDs.contains(tower.id)
+                    isBeingHealed: vm.healedTowerIDs.contains(tower.id),
+                    isControlled: vm.controlledTowerIDs.contains(tower.id),
+                    isDebuffed: vm.debuffedTowerIDs.contains(tower.id),
+                    isDrained: vm.drainedTowerIDs.contains(tower.id)
                 )
                 .position(tower.position)
                 .onTapGesture {
@@ -364,6 +367,9 @@ struct TowerView: View {
     let selected: Bool
     var isProtected: Bool = false
     var isBeingHealed: Bool = false
+    var isControlled: Bool = false
+    var isDebuffed: Bool = false
+    var isDrained: Bool = false
 
     @State private var pulse: Double = 0
 
@@ -375,6 +381,50 @@ struct TowerView: View {
                     .stroke(stone.kind.color.opacity(0.35), lineWidth: 1.5)
                     .frame(width: 84, height: 84)
                     .shadow(color: stone.kind.color.opacity(0.55), radius: 5)
+            }
+
+            // Bhasmasura ash debuff — orange charred haze + ↓ arrow
+            if isDebuffed {
+                Circle()
+                    .stroke(Color.orange.opacity(0.65), style: StrokeStyle(lineWidth: 1.6, dash: [3, 3]))
+                    .frame(width: 88, height: 88)
+                    .shadow(color: .orange.opacity(0.4), radius: 4)
+                Image(systemName: "arrow.down.circle.fill")
+                    .font(.system(size: 14, weight: .heavy))
+                    .foregroundColor(.orange)
+                    .shadow(color: .black.opacity(0.8), radius: 2)
+                    .offset(x: 28, y: -28)
+            }
+
+            // Putana drain — pink line flash that pulses once
+            if isDrained {
+                Circle()
+                    .stroke(Color(red: 0.95, green: 0.35, blue: 0.65).opacity(0.85),
+                            style: StrokeStyle(lineWidth: 2.5))
+                    .frame(width: 86 + 12 * pulse, height: 86 + 12 * pulse)
+                    .opacity(1.0 - pulse)
+            }
+
+            // Raktabija blood-grip — red dripping outline + skull
+            if isControlled {
+                Circle()
+                    .stroke(Color(red: 0.85, green: 0.05, blue: 0.15).opacity(0.85),
+                            style: StrokeStyle(lineWidth: 2.2, dash: [6, 3]))
+                    .frame(width: 92, height: 92)
+                    .shadow(color: .red.opacity(0.7), radius: 6)
+                ForEach(0..<5, id: \.self) { i in
+                    Image(systemName: "drop.fill")
+                        .font(.system(size: 8))
+                        .foregroundColor(Color(red: 0.85, green: 0.05, blue: 0.15))
+                        .offset(x: cos(Double(i) * .pi * 0.4) * 38,
+                                y: sin(Double(i) * .pi * 0.4) * 38 + pulse * 8)
+                        .opacity(0.9 - pulse * 0.5)
+                }
+                Image(systemName: "xmark.octagon.fill")
+                    .font(.system(size: 14, weight: .heavy))
+                    .foregroundColor(.red)
+                    .shadow(color: .black, radius: 2)
+                    .offset(x: -28, y: -28)
             }
 
             // Shield shimmer (Lakshman/Suraksha/Vajra Kavach barrier coverage)

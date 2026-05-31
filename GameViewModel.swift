@@ -1426,7 +1426,7 @@ enum EnemyKind: String, CaseIterable {
 
     var attacksTowers: Bool {
         switch self {
-        case .mahishasura, .ravana, .indrajit, .tarakasura, .vritra, .bhasmasura: return true
+        case .mahishasura, .ravana, .indrajit, .tarakasura, .vritra, .bhasmasura, .putana: return true
         default: return false
         }
     }
@@ -1439,6 +1439,7 @@ enum EnemyKind: String, CaseIterable {
         case .tarakasura:  return 50
         case .vritra:      return 70
         case .bhasmasura:  return 25
+        case .putana:      return 30   // siphon — heals self for this amount per hit
         default: return 0
         }
     }
@@ -1451,6 +1452,7 @@ enum EnemyKind: String, CaseIterable {
         case .tarakasura:  return 0.9
         case .vritra:      return 0.8
         case .bhasmasura:  return 1.1
+        case .putana:      return 1.0
         default: return 0
         }
     }
@@ -1501,6 +1503,15 @@ final class GameViewModel {
     var protectedTowerIDs: Set<UUID> = []
     var healedTowerIDs: Set<UUID> = []
     var bossAttackFlashes: [BossAttackFlash] = []
+    /// Towers under Raktabija's blood-grip (stop firing). Persists for the
+    /// rest of the current wave once a tower is taken — cleared on
+    /// wave-completion / reset.
+    var controlledTowerIDs: Set<UUID> = []
+    /// Towers currently inside Bhasmasura's ash aura (stats revert to T1).
+    /// Recomputed every tick.
+    var debuffedTowerIDs: Set<UUID> = []
+    /// Towers currently being drained by Putana (transient one-tick flag for visuals).
+    var drainedTowerIDs: Set<UUID> = []
 
     private(set) var pathPoints: [CGPoint] = []
     private(set) var pathLength: CGFloat = 0
@@ -1740,8 +1751,14 @@ final class GameViewModel {
 
     // MARK: - Effective stats (with race bonuses)
 
+    /// Stats fall back to the path's tier-1 astra while a tower is engulfed
+    /// in Bhasmasura's ash aura.
+    private func effectiveKind(of tower: Tower) -> TowerKind {
+        debuffedTowerIDs.contains(tower.id) ? tower.path.astras[0] : tower.kind
+    }
+
     func damage(of tower: Tower) -> Double {
-        var d = tower.kind.baseDamage * (race?.damageMultiplier ?? 1.0)
+        var d = effectiveKind(of: tower).baseDamage * (race?.damageMultiplier ?? 1.0)
         if let s = tower.stone {
             d *= s.kind.damageMultiplier(level: s.level)
         }
@@ -1753,11 +1770,11 @@ final class GameViewModel {
         if let s = tower.stone {
             raceMult *= s.kind.fireRateMultiplier(level: s.level)
         }
-        return tower.kind.baseFireInterval / raceMult
+        return effectiveKind(of: tower).baseFireInterval / raceMult
     }
 
     func range(of tower: Tower) -> CGFloat {
-        var r = tower.kind.baseRange * (race?.rangeMultiplier ?? 1.0)
+        var r = effectiveKind(of: tower).baseRange * (race?.rangeMultiplier ?? 1.0)
         if let s = tower.stone {
             r *= s.kind.rangeMultiplier(level: s.level)
         }
@@ -2182,6 +2199,7 @@ final class GameViewModel {
         runDetection()
         runHealers(dt: dt)
         runShieldTracking()
+        runEnemyAbilities()
         runRaceRegen(dt: dt)
         bossAttackTowers(dt: dt)
         fireTowers(dt: dt, now: now)
@@ -2271,11 +2289,17 @@ final class GameViewModel {
     private func fireTowers(dt: TimeInterval, now: TimeInterval) {
         for i in towers.indices {
             guard towers[i].path.isOffensive else { continue }
+            // Raktabija blood-grip: towers under control don't fire.
+            if controlledTowerIDs.contains(towers[i].id) { continue }
             towers[i].fireCooldown += dt
             let interval = fireInterval(of: towers[i])
             guard towers[i].fireCooldown >= interval else { continue }
             if let target = pickTarget(for: towers[i]) {
-                let k = towers[i].kind
+                // Bhasmasura ash debuff: while inside an ash aura the tower
+                // reverts to its tier-1 astra for all projectile properties.
+                let k: TowerKind = debuffedTowerIDs.contains(towers[i].id)
+                    ? towers[i].path.astras[0]
+                    : towers[i].kind
                 let dx = target.position.x - towers[i].position.x
                 let dy = target.position.y - towers[i].position.y
                 let len = max(0.0001, hypot(dx, dy))
@@ -2391,6 +2415,12 @@ final class GameViewModel {
                     to: towers[ti].position,
                     color: enemies[i].kind.color
                 ))
+                // Putana siphons life from the tower she strikes.
+                if enemies[i].kind == .putana {
+                    let cap = enemies[i].maxHP
+                    enemies[i].hp = min(cap, enemies[i].hp + dmg)
+                    drainedTowerIDs.insert(towers[ti].id)
+                }
             }
         }
     }
@@ -2440,6 +2470,58 @@ final class GameViewModel {
                 healedTowerIDs.insert(towers[i].id)
             }
         }
+    }
+
+    /// Specialist enemy abilities — Raktabija (control + spread), Bhasmasura (ash
+    /// debuff that reverts tower stats to T1 while in range). Putana's drain is
+    /// applied inside bossAttackTowers when she hits a tower.
+    private func runEnemyAbilities() {
+        // --- Raktabija blood-grip: nearby unprotected towers get controlled.
+        // Once taken, they stay taken for the rest of the wave (cleared in
+        // checkWaveCompletion). Spreads to adjacent unprotected towers each tick.
+        var newControlled = controlledTowerIDs
+        let raktas = enemies.filter { $0.kind == .raktabija && $0.hp > 0 }
+        let raktaReach: CGFloat = 80
+        let bloodSpread: CGFloat = 60
+        for r in raktas {
+            for t in towers where !newControlled.contains(t.id) && !protectedTowerIDs.contains(t.id) {
+                let d = hypot(r.position.x - t.position.x, r.position.y - t.position.y)
+                if d < raktaReach { newControlled.insert(t.id) }
+            }
+        }
+        // Spread from already-controlled towers (their blood seeps further).
+        if !newControlled.isEmpty {
+            let alreadyControlled = towers.filter { newControlled.contains($0.id) }
+            for src in alreadyControlled {
+                for t in towers where !newControlled.contains(t.id) && !protectedTowerIDs.contains(t.id) {
+                    let d = hypot(src.position.x - t.position.x, src.position.y - t.position.y)
+                    if d < bloodSpread { newControlled.insert(t.id) }
+                }
+            }
+        }
+        if newControlled != controlledTowerIDs {
+            controlledTowerIDs = newControlled
+        }
+
+        // --- Bhasmasura ash aura: any tower within 110px of an alive Bhasmasura
+        // has its stats reduced to its path's tier-1 astra. Recomputed every tick.
+        var newDebuffed: Set<UUID> = []
+        let bhasmas = enemies.filter { $0.kind == .bhasmasura && $0.hp > 0 }
+        let ashRadius: CGFloat = 110
+        if !bhasmas.isEmpty {
+            for t in towers {
+                for b in bhasmas {
+                    let d = hypot(b.position.x - t.position.x, b.position.y - t.position.y)
+                    if d < ashRadius { newDebuffed.insert(t.id); break }
+                }
+            }
+        }
+        if newDebuffed != debuffedTowerIDs {
+            debuffedTowerIDs = newDebuffed
+        }
+
+        // Drained set is transient — reset here, populated in bossAttackTowers.
+        if !drainedTowerIDs.isEmpty { drainedTowerIDs.removeAll() }
     }
 
     /// Tracks which towers currently sit inside a Rekha barrier's aura.
@@ -2601,6 +2683,8 @@ final class GameViewModel {
         for i in towers.indices {
             towers[i].hp = towers[i].maxHP
         }
+        // Raktabija's grip releases between waves; debuff/drain are tick-recomputed.
+        controlledTowerIDs.removeAll()
         SoundEngine.shared.playWaveClear()
     }
 
@@ -2719,6 +2803,9 @@ final class GameViewModel {
         bossAttackFlashes.removeAll()
         protectedTowerIDs.removeAll()
         healedTowerIDs.removeAll()
+        controlledTowerIDs.removeAll()
+        debuffedTowerIDs.removeAll()
+        drainedTowerIDs.removeAll()
         selectedSlotIndex = nil
         selectedTowerID = nil
         selectedBuildingID = nil
