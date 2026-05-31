@@ -1486,7 +1486,7 @@ struct BazaarOverlay: View {
                 Text("Get Points")
                     .font(.system(size: 13, weight: .heavy, design: .rounded))
                     .foregroundColor(.white)
-                Text("· Carries between runs")
+                Text("· Buy any time — points stay in your wallet")
                     .font(.system(size: 10))
                     .foregroundColor(.white.opacity(0.55))
                 Spacer()
@@ -1502,10 +1502,7 @@ struct BazaarOverlay: View {
                 }
                 .buttonStyle(.plain)
             }
-            LazyVGrid(columns: [
-                GridItem(.flexible(), spacing: 8),
-                GridItem(.flexible(), spacing: 8)
-            ], spacing: 8) {
+            VStack(spacing: 8) {
                 ForEach(PointBundle.all) { bundle in
                     bundleCard(bundle)
                 }
