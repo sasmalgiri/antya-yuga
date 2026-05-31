@@ -1563,7 +1563,7 @@ final class GameViewModel {
     var trimurtiCharge: Double = 0
     /// Rahu eclipse animation timer (seconds left in .rahuEclipse)
     var rahuTimer: TimeInterval = 0
-    static let rahuLifetime: TimeInterval = 3.2
+    static let rahuLifetime: TimeInterval = 2.5
     /// Center tower world position (lazily set when phase enters .charging)
     var sudarshanPosition: CGPoint = .zero
     /// Rotation angle for the chakra visual (driven by SwiftUI)
@@ -1571,9 +1571,13 @@ final class GameViewModel {
     /// Convenience accessor for the on-field Kali Yuga (the final boss).
     var finalBoss: Enemy? { enemies.first(where: { $0.kind == .kaliYuga }) }
 
-    /// Trimurti tap cost: combined-astra is twice as steep per tap as the Sudarshan.
-    static let trimurtiTapCost = Resources(gold: 600, metal: 60, tech: 60, jotisha: 60, veda: 60)
-    static let trimurtiTapProgress: Double = 0.125   // 8 taps fills the meter
+    /// Trimurti tap cost: same per-tap weight as Sudarshan; rebalanced for
+    /// achievable charge during the empowered phase.
+    static let trimurtiTapCost = Resources(gold: 300, metal: 30, tech: 30, jotisha: 30, veda: 30)
+    static let trimurtiTapProgress: Double = 0.167   // 6 taps fills the meter
+    /// Bonus chip damage applied to the empowered boss on every charge tap
+    /// so the player feels each contribution land.
+    static let trimurtiTapChipDamage: Double = 3500
 
     /// Resources required per "charge tap" — 10 taps fills the meter.
     static let sudarshanTapCost = Resources(gold: 300, metal: 30, tech: 30, jotisha: 30, veda: 30)
@@ -1727,15 +1731,15 @@ final class GameViewModel {
         if rahuTimer <= 0 {
             sudarshanPhase = .empoweredBoss
             trimurtiCharge = 0
-            // Empowered respawn — 50% more HP, +45% tower damage.
-            let empoweredHP = 75000.0
+            // Empowered respawn — +20% HP, +25% tower damage.
+            let empoweredHP = 60000.0
             var e = Enemy(kind: .kaliYuga,
                           hp: empoweredHP,
                           maxHP: empoweredHP,
                           distance: 0,
                           position: pathPoints.first ?? .zero,
                           heading: CGPoint(x: 1, y: 0))
-            e.towerDamageOverride = 80
+            e.towerDamageOverride = 70
             enemies.append(e)
         }
     }
@@ -1749,6 +1753,10 @@ final class GameViewModel {
         guard stock.canAfford(cost) else { return false }
         stock = stock - cost
         trimurtiCharge = min(1.0, trimurtiCharge + Self.trimurtiTapProgress)
+        // Each tap also chips the boss so the player feels immediate impact.
+        for i in enemies.indices where enemies[i].kind == .kaliYuga {
+            enemies[i].hp -= Self.trimurtiTapChipDamage
+        }
         SoundEngine.shared.playBuildPlaced()
         if trimurtiCharge >= 1.0 {
             fireTrimurti()
@@ -2456,7 +2464,7 @@ final class GameViewModel {
         // at 2.5× rate.
         let endgameOpen = sudarshanPhase == .empoweredBoss
         guard isWaveActive || endgameOpen else { return }
-        let endgameBoost = endgameOpen ? 2.5 : 1.0
+        let endgameBoost = endgameOpen ? 3.0 : 1.0
         for i in buildings.indices {
             // Vritra drought aura halts production entirely.
             if droughtBuildingIDs.contains(buildings[i].id) { continue }
@@ -2489,14 +2497,20 @@ final class GameViewModel {
 
     private func spawnEnemy(kind: EnemyKind) {
         let (pt, dir) = pointAndDirection(at: 0)
-        let hpMult = Difficulty.hpMultiplier(wave: wave) * pathDifficultyScale
+        // Kali Yuga uses his hand-balanced HP / damage values verbatim — the
+        // wave-multiplier (≈ 600× at W48) would otherwise put him in the
+        // tens-of-millions of HP and the chakra could never kill him.
+        let useScaling = (kind != .kaliYuga)
+        let hpMult = useScaling ? Difficulty.hpMultiplier(wave: wave) * pathDifficultyScale : 1.0
         let scaledHP = kind.maxHP * hpMult
-        let scaledTowerDmg = kind.towerDamage * Difficulty.bossDamageMultiplier(wave: wave)
+        let scaledTowerDmg = useScaling
+            ? kind.towerDamage * Difficulty.bossDamageMultiplier(wave: wave)
+            : kind.towerDamage
         var e = Enemy(
             kind: kind, hp: scaledHP, maxHP: scaledHP,
             distance: 0, position: pt, heading: dir
         )
-        e.speedMultiplier = Difficulty.speedMultiplier(wave: wave)
+        e.speedMultiplier = useScaling ? Difficulty.speedMultiplier(wave: wave) : 1.0
         e.towerDamageOverride = scaledTowerDmg
         enemies.append(e)
     }

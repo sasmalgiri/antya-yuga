@@ -2359,7 +2359,7 @@ struct TrimurtiCenterTowerView: View {
                     Image(systemName: "flame.fill")
                     Text("Charge Trimurti")
                         .font(.system(size: 11, weight: .heavy, design: .rounded))
-                    Text("600g·60×4")
+                    Text("300g·30×4")
                         .font(.system(size: 9, weight: .semibold, design: .rounded))
                 }
                 .foregroundColor(.white)
