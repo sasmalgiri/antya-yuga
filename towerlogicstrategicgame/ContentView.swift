@@ -1162,59 +1162,71 @@ struct TowerMenu: View {
     private var auraSection: some View {
         let healUnlocked = vm.isUnlocked(.middle)
         let shieldUnlocked = vm.isUnlocked(.modern)
-        // Don't render the row at all if no age that unlocks an aura is open.
         if healUnlocked || shieldUnlocked {
             HStack(spacing: 8) {
                 if healUnlocked {
-                    auraToggle(
+                    auraTierToggle(
                         icon: "cross.case.fill",
                         title: "Heal",
-                        active: tower.healAuraActive,
+                        level: tower.healAuraLevel,
                         color: Color(red: 0.30, green: 0.95, blue: 0.55),
-                        cost: GameViewModel.healAuraCost,
-                        canEnable: vm.canEnableHealAura(on: tower)
+                        nextCost: vm.nextHealAuraCost(for: tower),
+                        canUpgrade: vm.canUpgradeHealAura(on: tower)
                     ) {
-                        vm.enableHealAura(towerID: tower.id)
+                        vm.upgradeHealAura(towerID: tower.id)
                     }
                 }
                 if shieldUnlocked {
-                    auraToggle(
+                    auraTierToggle(
                         icon: "shield.checkered",
                         title: "Shield",
-                        active: tower.shieldAuraActive,
+                        level: tower.shieldAuraLevel,
                         color: .cyan,
-                        cost: GameViewModel.shieldAuraCost,
-                        canEnable: vm.canEnableShieldAura(on: tower)
+                        nextCost: vm.nextShieldAuraCost(for: tower),
+                        canUpgrade: vm.canUpgradeShieldAura(on: tower)
                     ) {
-                        vm.enableShieldAura(towerID: tower.id)
+                        vm.upgradeShieldAura(towerID: tower.id)
                     }
                 }
             }
         }
     }
 
-    private func auraToggle(
+    /// Tier-aware aura toggle: shows current level (0-3), upgrade cost for
+    /// the next tier, and "MAX" once the third level is reached.
+    private func auraTierToggle(
         icon: String,
         title: String,
-        active: Bool,
+        level: Int,
         color: Color,
-        cost: Resources,
-        canEnable: Bool,
+        nextCost: Resources,
+        canUpgrade: Bool,
         action: @escaping () -> Void
     ) -> some View {
-        Button(action: action) {
+        let isMax = level >= GameViewModel.maxAuraLevel
+        let active = level > 0
+        return Button(action: action) {
             HStack(spacing: 5) {
                 Image(systemName: icon)
                     .font(.system(size: 12, weight: .bold))
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(title)
-                        .font(.system(size: 11, weight: .heavy, design: .rounded))
-                    if active {
-                        Text("Active")
-                            .font(.system(size: 8, weight: .semibold))
-                            .foregroundColor(.white.opacity(0.8))
+                    HStack(spacing: 3) {
+                        Text(title)
+                            .font(.system(size: 11, weight: .heavy, design: .rounded))
+                        if active {
+                            Text("L\(level)")
+                                .font(.system(size: 10, weight: .heavy, design: .rounded))
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                                .background(Capsule().fill(Color.black.opacity(0.30)))
+                        }
+                    }
+                    if isMax {
+                        Text("MAX")
+                            .font(.system(size: 8, weight: .heavy))
+                            .foregroundColor(active ? .black : .white.opacity(0.8))
                     } else {
-                        ResourceCostRow(cost: cost, size: 7)
+                        ResourceCostRow(cost: nextCost, size: 7)
                     }
                 }
             }
@@ -1230,8 +1242,8 @@ struct TowerMenu: View {
             .clipShape(RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.plain)
-        .disabled(active || !canEnable)
-        .opacity(active ? 1.0 : (canEnable ? 1.0 : 0.45))
+        .disabled(isMax || !canUpgrade)
+        .opacity(isMax ? 1.0 : (canUpgrade ? 1.0 : 0.55))
     }
 
     @ViewBuilder

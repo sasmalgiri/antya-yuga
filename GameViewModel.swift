@@ -1027,12 +1027,12 @@ struct Tower: Identifiable {
     var stone: Stone? = nil
     var hp: Double = 200
     var maxHP: Double = 200
-    /// Once enabled, the tower emits a heal aura (in addition to firing).
-    /// Unlocks at Treta Yug. Permanent until tower sold.
-    var healAuraActive: Bool = false
-    /// Once enabled, the tower emits a damage-reduction aura.
-    /// Unlocks at Dvapara Yug. Permanent until tower sold.
-    var shieldAuraActive: Bool = false
+    /// 0 = no heal aura, 1-3 = upgrade tier of the heal aura.
+    /// L1 unlocks at Treta Yug; each upgrade re-applies a resource cost.
+    var healAuraLevel: Int = 0
+    /// 0 = no shield aura, 1-3 = upgrade tier.
+    /// L1 unlocks at Dvapara Yug; each upgrade re-applies a resource cost.
+    var shieldAuraLevel: Int = 0
 
     var kind: TowerKind {
         path.astras[max(0, min(tier - 1, path.astras.count - 1))]
@@ -1657,7 +1657,8 @@ final class GameViewModel {
         trimurtiCharge = 0
         rahuTimer = 0
         sudarshanHP = sudarshanMaxHP
-        SoundEngine.shared.setMusicAge(.ancient)
+        // Background music disabled — was: SoundEngine.shared.setMusicAge(.ancient)
+        SoundEngine.shared.stopMusic()
     }
 
     var unlockedAge: Age = .ancient
@@ -1701,7 +1702,7 @@ final class GameViewModel {
             beginSudarshanPhase()
         }
         SoundEngine.shared.playAgeUnlocked()
-        SoundEngine.shared.setMusicAge(next)
+        // Background music disabled — was: SoundEngine.shared.setMusicAge(next)
     }
 
     // MARK: - Sudarshan Chakra endgame logic
@@ -2389,41 +2390,67 @@ final class GameViewModel {
 
     // MARK: - Stone management
 
-    // MARK: - Tower auras (heal + shield)
+    // MARK: - Tower auras (heal + shield, 3 upgrade tiers each)
 
-    /// Cost to enable the heal-aura mode on a tower (unlocked at Treta Yug).
-    static let healAuraCost = Resources(jotisha: 50, veda: 5)
-    /// Cost to enable the shield-aura mode on a tower (unlocked at Dvapara).
-    static let shieldAuraCost = Resources(jotisha: 5, veda: 50)
-    /// Heal per second a tower with an active aura applies to nearby towers.
-    static let towerAuraHealPerSec: Double = 4.0
-    /// Damage reduction (0..1) applied to towers within an active shield aura.
-    static let towerAuraShield: Double = 0.15
-    /// Range of either aura.
-    static let towerAuraRange: CGFloat = 90
+    static let maxAuraLevel: Int = 3
 
-    func canEnableHealAura(on tower: Tower) -> Bool {
-        guard isUnlocked(.middle), !tower.healAuraActive else { return false }
-        return stock.canAfford(Self.healAuraCost)
+    /// Per-tier heal-rate and range (index by level, 0 = inactive).
+    static let healAuraRate:  [Double]  = [0, 5,   9,  14]
+    static let healAuraRange: [CGFloat] = [0, 80, 100, 130]
+    /// Per-tier shield reduction and range.
+    static let shieldAuraReduction: [Double]  = [0, 0.15, 0.22, 0.30]
+    static let shieldAuraRangeTier: [CGFloat] = [0, 80,   100,  130]
+
+    /// Costs to go from level N to level N+1.
+    static let healAuraUpgradeCost: [Resources] = [
+        Resources(),                              // L0 placeholder
+        Resources(jotisha: 50,  veda: 5),         // 0 → 1
+        Resources(jotisha: 90,  veda: 15),        // 1 → 2
+        Resources(jotisha: 140, veda: 30)         // 2 → 3
+    ]
+    static let shieldAuraUpgradeCost: [Resources] = [
+        Resources(),
+        Resources(jotisha: 5,  veda: 50),
+        Resources(jotisha: 15, veda: 90),
+        Resources(jotisha: 30, veda: 140)
+    ]
+
+    func nextHealAuraCost(for tower: Tower) -> Resources {
+        let next = tower.healAuraLevel + 1
+        guard next <= Self.maxAuraLevel else { return Resources() }
+        return Self.healAuraUpgradeCost[next]
     }
 
-    func canEnableShieldAura(on tower: Tower) -> Bool {
-        guard isUnlocked(.modern), !tower.shieldAuraActive else { return false }
-        return stock.canAfford(Self.shieldAuraCost)
+    func nextShieldAuraCost(for tower: Tower) -> Resources {
+        let next = tower.shieldAuraLevel + 1
+        guard next <= Self.maxAuraLevel else { return Resources() }
+        return Self.shieldAuraUpgradeCost[next]
     }
 
-    func enableHealAura(towerID: UUID) {
+    func canUpgradeHealAura(on tower: Tower) -> Bool {
+        guard isUnlocked(.middle) else { return false }
+        guard tower.healAuraLevel < Self.maxAuraLevel else { return false }
+        return stock.canAfford(nextHealAuraCost(for: tower))
+    }
+
+    func canUpgradeShieldAura(on tower: Tower) -> Bool {
+        guard isUnlocked(.modern) else { return false }
+        guard tower.shieldAuraLevel < Self.maxAuraLevel else { return false }
+        return stock.canAfford(nextShieldAuraCost(for: tower))
+    }
+
+    func upgradeHealAura(towerID: UUID) {
         guard let i = towers.firstIndex(where: { $0.id == towerID }) else { return }
-        guard canEnableHealAura(on: towers[i]) else { return }
-        stock = stock - Self.healAuraCost
-        towers[i].healAuraActive = true
+        guard canUpgradeHealAura(on: towers[i]) else { return }
+        stock = stock - nextHealAuraCost(for: towers[i])
+        towers[i].healAuraLevel += 1
     }
 
-    func enableShieldAura(towerID: UUID) {
+    func upgradeShieldAura(towerID: UUID) {
         guard let i = towers.firstIndex(where: { $0.id == towerID }) else { return }
-        guard canEnableShieldAura(on: towers[i]) else { return }
-        stock = stock - Self.shieldAuraCost
-        towers[i].shieldAuraActive = true
+        guard canUpgradeShieldAura(on: towers[i]) else { return }
+        stock = stock - nextShieldAuraCost(for: towers[i])
+        towers[i].shieldAuraLevel += 1
     }
 
     /// Pal signature: −25% stone cost (both attach and upgrade).
@@ -2892,10 +2919,11 @@ final class GameViewModel {
                 best = max(best, t.kind.damageReduction)
             }
         }
-        for t in towers where t.shieldAuraActive {
+        for t in towers where t.shieldAuraLevel > 0 {
+            let tierRange = Self.shieldAuraRangeTier[t.shieldAuraLevel]
             let d = hypot(t.position.x - point.x, t.position.y - point.y)
-            if d <= Self.towerAuraRange {
-                best = max(best, Self.towerAuraShield)
+            if d <= tierRange {
+                best = max(best, Self.shieldAuraReduction[t.shieldAuraLevel])
             }
         }
         return best
@@ -2916,7 +2944,7 @@ final class GameViewModel {
         healedTowerIDs.removeAll(keepingCapacity: true)
         guard isWaveActive else { return }
         let healers = towers.filter { $0.path == .sanjivani }
-        let auraSources = towers.filter { $0.healAuraActive }
+        let auraSources = towers.filter { $0.healAuraLevel > 0 }
         guard !healers.isEmpty || !auraSources.isEmpty else { return }
         for i in towers.indices {
             guard towers[i].hp < towers[i].maxHP else { continue }
@@ -2930,12 +2958,13 @@ final class GameViewModel {
                     bestRate = max(bestRate, h.kind.healPerSec)
                 }
             }
-            // Heal-aura mode on any other tower
+            // Per-tower heal aura — tier 1/2/3 stats.
             for h in auraSources where h.id != towers[i].id {
+                let tierRange = Self.healAuraRange[h.healAuraLevel]
                 let d = hypot(h.position.x - towers[i].position.x,
                               h.position.y - towers[i].position.y)
-                if d <= Self.towerAuraRange {
-                    bestRate = max(bestRate, Self.towerAuraHealPerSec)
+                if d <= tierRange {
+                    bestRate = max(bestRate, Self.healAuraRate[h.healAuraLevel])
                 }
             }
             if bestRate > 0 {
