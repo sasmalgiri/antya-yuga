@@ -2596,16 +2596,23 @@ final class GameViewModel {
             // within his attack reach. Only advances after killing the tower.
             var effectiveSpeed = enemies[i].kind.speed * enemies[i].slowFactor * enemies[i].speedMultiplier
                                  * CGFloat(rageMultiplier(of: enemies[i]))
-            // Empowered Kali Yuga abandons the path either when every defence
-            // has fallen OR when he reaches the end of the path — in both
-            // cases he marches the rest of the way to the Sudarshan. Guard
-            // against an uninitialised sudarshanPosition (would point at 0,0).
+            // Empowered Kali Yuga abandons the path when every defence has
+            // fallen OR he reaches the path end OR (sticky) he's already
+            // wandered far off the path. The third clause prevents him
+            // teleporting back if the player rebuilds a tower while he's
+            // mid-divert. Guard against an uninitialised sudarshanPosition.
             let reachedEnd = enemies[i].kind == .kaliYuga
                 && enemies[i].distance >= pathLength - 1
             let defencesGone = towers.isEmpty && buildings.isEmpty
+            let offPath: Bool = {
+                guard enemies[i].kind == .kaliYuga else { return false }
+                let (pathPt, _) = pointAndDirection(at: min(enemies[i].distance, pathLength))
+                return hypot(enemies[i].position.x - pathPt.x,
+                             enemies[i].position.y - pathPt.y) > 40
+            }()
             if enemies[i].kind == .kaliYuga,
                sudarshanPhase == .empoweredBoss,
-               (defencesGone || reachedEnd),
+               (defencesGone || reachedEnd || offPath),
                sudarshanPosition.x > 0 || sudarshanPosition.y > 0 {
                 let dx = sudarshanPosition.x - enemies[i].position.x
                 let dy = sudarshanPosition.y - enemies[i].position.y
