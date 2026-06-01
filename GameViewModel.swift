@@ -1854,6 +1854,10 @@ final class GameViewModel {
         segmentLengths = (0..<(pathPoints.count - 1)).map { i in distance(pathPoints[i], pathPoints[i + 1]) }
         pathLength = segmentLengths.reduce(0, +)
         slots = computeSlots(size: size, isLarge: isLarge)
+        // The Sudarshan relic sits just past the path end from W1 — the
+        // visual "goal" enemies are marching toward. Recomputed whenever
+        // the path is rebuilt (orientation change, race switch, etc.).
+        sudarshanPosition = computeSudarshanPosition()
 
         // Reposition existing towers/buildings to new slot positions (drop orphans)
         towers = towers.compactMap { t in
@@ -1889,6 +1893,8 @@ final class GameViewModel {
         segmentLengths = (0..<(raw.count - 1)).map { i in distance(raw[i], raw[i + 1]) }
         pathLength = segmentLengths.reduce(0, +)
         slots = computeSlots(size: size, isLarge: isLarge)
+        // Position the Sudarshan relic at path end from W1.
+        sudarshanPosition = computeSudarshanPosition()
     }
 
     private static func compactPath(w: CGFloat, h: CGFloat) -> [CGPoint] {

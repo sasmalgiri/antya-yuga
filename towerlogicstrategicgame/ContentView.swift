@@ -89,8 +89,18 @@ struct ContentView: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
 
-            // Sudarshan endgame UI — center-of-screen relic, charging meter
-            // and tap-to-feed button. Active any time Dvapara is unlocked.
+            // The Sudarshan relic is the player's goal — enemies are marching
+            // toward it from W1. Shown in its dormant state until the Dvapara
+            // unlock activates the charging UI.
+            if vm.race != nil
+               && vm.sudarshanPhase == .inactive
+               && (vm.sudarshanPosition.x > 0 || vm.sudarshanPosition.y > 0) {
+                SudarshanRelicView()
+                    .position(vm.sudarshanPosition)
+                    .allowsHitTesting(false)
+            }
+            // Sudarshan endgame UI — center relic, charging meter, and
+            // tap-to-feed button. Replaces the dormant relic from Dvapara on.
             if vm.sudarshanPhase == .charging {
                 SudarshanCenterTowerView(vm: vm)
                     .position(vm.sudarshanPosition)
@@ -2247,6 +2257,59 @@ struct DamageNumberView: View {
             .position(x: number.position.x, y: number.position.y + drift - 8)
             .opacity(alpha)
             .scaleEffect(1.0 + (number.isCrit ? 0.25 : 0.10) * (1.0 - progress))
+    }
+}
+
+// MARK: - Always-on Sudarshan relic
+
+/// Dormant Sudarshan relic shown at the path end from W1. Visually marks
+/// the player's defensive objective — the enemies are walking toward it.
+/// Replaced by SudarshanCenterTowerView once the Dvapara charging phase
+/// activates.
+struct SudarshanRelicView: View {
+    @State private var glow: Double = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        ZStack {
+            // Soft golden halo
+            Circle()
+                .fill(RadialGradient(colors: [
+                    Color.yellow.opacity(0.30 + 0.10 * glow),
+                    Color.orange.opacity(0.12),
+                    .clear
+                ], center: .center, startRadius: 4, endRadius: 50))
+                .frame(width: 96, height: 96)
+                .blendMode(.plusLighter)
+            // Inner disc
+            Circle()
+                .fill(RadialGradient(colors: [
+                    Color(red: 1.00, green: 0.88, blue: 0.45),
+                    Color(red: 0.50, green: 0.28, blue: 0.05),
+                    .black
+                ], center: .center, startRadius: 2, endRadius: 28))
+                .frame(width: 56, height: 56)
+                .overlay(Circle().stroke(Color.yellow.opacity(0.7), lineWidth: 1.2))
+                .shadow(color: .orange.opacity(0.6), radius: 4)
+            // Yantra centerpiece
+            Image(systemName: "circle.hexagongrid.fill")
+                .font(.system(size: 26, weight: .heavy))
+                .foregroundColor(.yellow.opacity(0.95))
+                .shadow(color: .orange, radius: 3)
+            // Caption ribbon
+            Text("Sudarshan")
+                .font(.system(size: 8, weight: .heavy, design: .rounded))
+                .foregroundColor(.yellow)
+                .shadow(color: .black, radius: 2)
+                .offset(y: 38)
+        }
+        .frame(width: 80, height: 80)
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
+                glow = 1
+            }
+        }
     }
 }
 
