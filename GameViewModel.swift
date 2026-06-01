@@ -3300,8 +3300,8 @@ final class GameViewModel {
         stock.gold += bonus
         score += bonus
         // Active run buffs purchased mid-game
-        if activeBazaarPerks.contains(.waveTribute)   { stock.gold += 30 }
-        if activeBazaarPerks.contains(.waveVedaTithe) { stock.veda += 8 }
+        if activeBazaarPerks.contains(.waveTribute)   { stock.gold += 120 }
+        if activeBazaarPerks.contains(.waveVedaTithe) { stock.veda += 30 }
         // Per-run Bazaar points: 3 per wave, +3 every 5 waves, +10 every 10 waves.
         // Resets on game over with the rest of the run state.
         var wavePts = 3

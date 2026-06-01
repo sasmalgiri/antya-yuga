@@ -82,8 +82,8 @@ enum BazaarItem: String, CaseIterable, Identifiable, Codable {
         case .sageTech:         return "Instantly +60 tech"
         case .jyotishaBlessing: return "Instantly +80 jotisha"
         case .healersBoon:      return "Instantly +8 lives"
-        case .waveTribute:      return "+30 gold every wave (this run)"
-        case .waveVedaTithe:    return "+8 veda every wave (this run)"
+        case .waveTribute:      return "+120 gold every wave (this run)"
+        case .waveVedaTithe:    return "+30 veda every wave (this run)"
         case .longDefender:     return "+8 starting lives every run, forever"
         }
     }
