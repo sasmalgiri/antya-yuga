@@ -1971,6 +1971,51 @@ final class GameViewModel {
             }
             d += step
         }
+
+        // Edge-band pass: fill the bottom strip and the left/right margins
+        // with extra grid slots so the player has placement options at the
+        // perimeter, not only adjacent to the path itself.
+        let edgeStepX: CGFloat = isLarge ? 90 : 78
+        let edgeStepY: CGFloat = isLarge ? 78 : 70
+        let leftEdgeMax: CGFloat = isLarge ? 110 : 80
+        let rightEdgeMin: CGFloat = size.width - (isLarge ? 110 : 80)
+
+        // 1) Bottom strip — two-row grid below the path's lowest extent.
+        let bottomBandTop = size.height - (isLarge ? 180 : 150)
+        var y = bottomBandTop
+        while y < size.height - 70 {
+            var x = edgeStepX * 0.5
+            while x < size.width - edgeStepX * 0.5 {
+                let pos = CGPoint(x: x, y: y)
+                if !overlapsPath(pos, threshold: 36),
+                   !result.contains(where: { hypot($0.position.x - pos.x, $0.position.y - pos.y) < minSlotDistance }) {
+                    result.append(BuildSlot(index: idx, position: pos))
+                    idx += 1
+                }
+                x += edgeStepX
+            }
+            y += edgeStepY
+        }
+
+        // 2) Left and right edge columns — vertical strips not already filled.
+        var sideY = topMargin
+        while sideY < size.height - bottomMargin {
+            for x in [edgeStepX * 0.5, size.width - edgeStepX * 0.5] {
+                let pos = CGPoint(x: x, y: sideY)
+                let inSideBand = pos.x < leftEdgeMax || pos.x > rightEdgeMin
+                guard inSideBand,
+                      pos.y > topMargin, pos.y < size.height - bottomMargin else { continue }
+                if overlapsPath(pos, threshold: 36) { continue }
+                let crowded = result.contains { existing in
+                    hypot(existing.position.x - pos.x, existing.position.y - pos.y) < minSlotDistance
+                }
+                if crowded { continue }
+                result.append(BuildSlot(index: idx, position: pos))
+                idx += 1
+            }
+            sideY += edgeStepY
+        }
+
         return result
     }
 
