@@ -2518,39 +2518,105 @@ struct RahuEclipseOverlay: View {
 struct TrimurtiCenterTowerView: View {
     let vm: GameViewModel
     @State private var pulse: Double = 0
+    @State private var spinAngle: Double = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        // Charge is 0…1; we drive every visual off of it so the relic
+        // visibly intensifies as the player feeds resources.
+        let charge = vm.trimurtiCharge
+        let intensity = CGFloat(charge)                  // 0 at empty, 1 at full
+        let strong   = max(0, charge - 0.33) * 1.5       // kicks in at 33%
+        let surge    = max(0, charge - 0.66) * 3.0       // kicks in at 66%
+        let ready    = charge >= 1.0
+
         VStack(spacing: 6) {
             ZStack {
+                // Orbiting embers — start appearing at ~20% charge.
+                if charge > 0.20 {
+                    ForEach(0..<8, id: \.self) { i in
+                        let a = Double(i) * 45 + spinAngle
+                        Circle()
+                            .fill(Color.yellow)
+                            .frame(width: 2 + 2 * intensity, height: 2 + 2 * intensity)
+                            .offset(
+                                x: cos(a * .pi / 180) * (50 + 8 * intensity),
+                                y: sin(a * .pi / 180) * (50 + 8 * intensity)
+                            )
+                            .opacity(intensity)
+                            .shadow(color: .yellow, radius: 3 + 3 * intensity)
+                    }
+                }
+
+                // Outer charge ring — thickens as charge grows.
                 Circle()
                     .stroke(Color.red.opacity(0.25), lineWidth: 6)
                     .frame(width: 104, height: 104)
                 Circle()
-                    .trim(from: 0, to: vm.trimurtiCharge)
+                    .trim(from: 0, to: charge)
                     .stroke(
                         AngularGradient(colors: [.red, .orange, .yellow, .white, .red],
                                         center: .center),
-                        style: StrokeStyle(lineWidth: 6, lineCap: .round)
+                        style: StrokeStyle(lineWidth: 6 + 3 * intensity, lineCap: .round)
                     )
                     .frame(width: 104, height: 104)
                     .rotationEffect(.degrees(-90))
+                    .shadow(color: Color.yellow.opacity(Double(intensity)), radius: 6 * Double(intensity))
+
+                // Dashed mid-ring fades in at 33% and counter-rotates.
+                if strong > 0 {
+                    Circle()
+                        .stroke(Color.yellow.opacity(Double(strong)),
+                                style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+                        .frame(width: 90, height: 90)
+                        .rotationEffect(.degrees(spinAngle))
+                }
+                // Bright inner ring fades in at 66%, spinning the other way.
+                if surge > 0 {
+                    Circle()
+                        .stroke(Color.white.opacity(Double(min(surge, 0.85))),
+                                style: StrokeStyle(lineWidth: 1.2, dash: [3, 5]))
+                        .frame(width: 76, height: 76)
+                        .rotationEffect(.degrees(-spinAngle * 1.7))
+                }
+
+                // Inner radial fill — gets brighter, redder, more pulse the more charged.
                 Circle()
                     .fill(RadialGradient(colors: [
-                        Color.red.opacity(0.65 + 0.25 * pulse),
-                        Color.orange.opacity(0.4),
+                        Color.red.opacity(0.45 + 0.45 * Double(intensity) + 0.20 * pulse),
+                        Color.orange.opacity(0.35 + 0.30 * Double(intensity)),
                         .black
                     ], center: .center, startRadius: 4, endRadius: 44))
                     .frame(width: 86, height: 86)
-                // Trimurti emblem — three weapons interlocked (simplified)
+
+                // Trimurti emblem grows and brightens with charge.
                 Image(systemName: "burst.fill")
-                    .font(.system(size: 34, weight: .heavy))
-                    .foregroundColor(.yellow)
-                    .shadow(color: .red, radius: 6)
-                Text(vm.trimurtiCharge >= 1.0 ? "Fire" : "\(Int(vm.trimurtiCharge * 100))%")
+                    .font(.system(size: 30 + 8 * intensity, weight: .heavy))
+                    .foregroundColor(ready ? .white : .yellow)
+                    .shadow(color: ready ? .white : .red, radius: 6 + 6 * Double(intensity))
+
+                // At 100% charge: explosive outer halo + 6 vajra rays.
+                if ready {
+                    Circle()
+                        .stroke(Color.white.opacity(0.85), lineWidth: 2)
+                        .frame(width: 120 + 8 * pulse, height: 120 + 8 * pulse)
+                        .blendMode(.plusLighter)
+                    ForEach(0..<6, id: \.self) { i in
+                        Rectangle()
+                            .fill(LinearGradient(colors: [.white, .yellow, .clear],
+                                                 startPoint: .top, endPoint: .bottom))
+                            .frame(width: 3, height: 54)
+                            .offset(y: -78)
+                            .rotationEffect(.degrees(Double(i) * 60 + spinAngle))
+                            .opacity(0.55 + 0.45 * pulse)
+                            .shadow(color: .white, radius: 6)
+                    }
+                }
+
+                Text(ready ? "READY" : "\(Int(charge * 100))%")
                     .font(.system(size: 11, weight: .heavy, design: .rounded))
                     .foregroundColor(.white)
-                    .offset(y: 38)
+                    .offset(y: 42)
                     .shadow(color: .black, radius: 2)
             }
             // At full charge the button becomes the manual FIRE trigger.
@@ -2629,6 +2695,9 @@ struct TrimurtiCenterTowerView: View {
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
                 pulse = 1
+            }
+            withAnimation(.linear(duration: 7).repeatForever(autoreverses: false)) {
+                spinAngle = 360
             }
         }
     }
