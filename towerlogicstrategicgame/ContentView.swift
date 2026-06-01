@@ -2391,10 +2391,27 @@ struct SudarshanCenterTowerView: View {
                     .font(.system(size: 30, weight: .heavy))
                     .foregroundColor(.yellow.opacity(0.95))
                     .shadow(color: .orange, radius: 4)
-                Text(vm.sudarshanCharge >= 1.0 ? "Ready" : "\(Int(vm.sudarshanCharge * 100))%")
+                // At full charge but no Kali Yuga yet, tell the player
+                // why the relic isn't firing — it's waiting for wave 48.
+                let centerLabel: String = {
+                    if vm.sudarshanCharge < 1.0 {
+                        return "\(Int(vm.sudarshanCharge * 100))%"
+                    } else if vm.finalBoss == nil {
+                        return "Wait W48"
+                    } else {
+                        return "Ready"
+                    }
+                }()
+                Text(centerLabel)
                     .font(.system(size: 11, weight: .heavy, design: .rounded))
                     .foregroundColor(.white)
                     .offset(y: 32)
+                    .shadow(color: .black, radius: 2)
+            }
+            if vm.sudarshanCharge >= 1.0 && vm.finalBoss == nil {
+                Text("Awaiting Kali Yuga · Wave 48")
+                    .font(.system(size: 9, weight: .heavy, design: .rounded))
+                    .foregroundColor(.yellow.opacity(0.9))
                     .shadow(color: .black, radius: 2)
             }
 

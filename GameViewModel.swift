@@ -1133,6 +1133,12 @@ struct Enemy: Identifiable {
     var detected: Bool = false
     var attackCooldown: TimeInterval = 0
     var freezeRemaining: TimeInterval = 0
+    /// Cumulative time spent frozen in the current streak — when this
+    /// exceeds the cap, the enemy thaws and gains brief immunity so it
+    /// can't be locked in place forever.
+    var freezeStreak: TimeInterval = 0
+    /// While > 0, incoming freezes are ignored (chill immunity).
+    var freezeImmunity: TimeInterval = 0
 
     // Wave-scaled stats
     var speedMultiplier: CGFloat = 1.0
@@ -2203,82 +2209,75 @@ final class GameViewModel {
             }
 
         } else if n <= 14 {
-            // Asura (physical-immune) joins. Boss waves every wave.
-            let p = 17 + n * 2
-            let r = 13 + (n - 12)
-            let d = 9 + (n - 12) * 2
-            let v = 4 + (n - 12)
-            let a = 2 + (n - 12) * 2
-            let m = 6 + (n - 12) * 2
+            // Asura (physical-immune) joins. Counts trimmed so waves feel
+            // finite instead of dragging on for minutes.
+            let p = 12 + n
+            let r = 8 + (n - 12)
+            let d = 5 + (n - 12)
+            let v = 3 + (n - 12)
+            let a = 2 + (n - 12)
+            let m = 4 + (n - 12)
             for _ in 0..<p { list.append((.pishacha, interval)) }
             for _ in 0..<r { list.append((.rakshasa, interval)) }
             for _ in 0..<d { list.append((.daitya, interval)) }
             for _ in 0..<a { list.append((.asura, interval + 0.18)) }
             for _ in 0..<v { list.append((.vetala, interval + 0.12)) }
             for _ in 0..<m { list.append((.mayavi, interval + 0.10)) }
-            // Mixed boss spawns — Tarakasura (fire+water immune) debuts at W13
-            if n == 13 { list.append((.mahishasura, 1.2)); list.append((.indrajit, 1.4)); list.append((.tarakasura, 1.6)) }
-            if n == 14 { list.append((.indrajit, 1.3)); list.append((.mahishasura, 1.2)); list.append((.raktabija, 1.5)); list.append((.tarakasura, 1.7)) }
+            // ONE big boss per wave instead of three — keeps the spotlight
+            // on a single fight rather than a multi-boss pile.
+            if n == 13 { list.append((.tarakasura, 1.5)) }
+            if n == 14 { list.append((.raktabija, 1.5)) }
 
         } else if n <= 19 {
-            // Bosses mixed into EVERY wave; Indrajit invisible boss recurring
-            let p = 22 + n * 2
-            let r = 16 + (n - 14)
-            let d = 12 + (n - 14)
-            let v = 6 + (n - 14)
-            let a = 6 + (n - 14)
-            let m = 7 + (n - 14) * 2
+            // Bosses mixed in — but counts capped so each wave fits a
+            // reasonable timeframe.
+            let p = 14 + (n - 14)
+            let r = 10 + (n - 14)
+            let d = 7 + (n - 14)
+            let v = 4 + (n - 14)
+            let a = 4 + (n - 14)
+            let m = 5 + (n - 14)
             for _ in 0..<p { list.append((.pishacha, interval)) }
             for _ in 0..<r { list.append((.rakshasa, interval)) }
             for _ in 0..<d { list.append((.daitya, interval)) }
             for _ in 0..<a { list.append((.asura, interval + 0.16)) }
             for _ in 0..<v { list.append((.vetala, interval + 0.12)) }
             for _ in 0..<m { list.append((.mayavi, interval + 0.10)) }
-            // Mixed multi-boss waves (every wave from W15) — specialist demons mixed in
+            // 1-2 bosses per wave only.
             switch n {
-            case 15: list.append((.mahishasura, 1.0)); list.append((.indrajit, 1.5)); list.append((.tarakasura, 1.7))
-            case 16: list.append((.mahishasura, 1.0)); list.append((.mahishasura, 1.2)); list.append((.ravana, 1.6))
-            case 17: list.append((.indrajit, 1.4)); list.append((.indrajit, 1.5)); list.append((.raktabija, 1.6)); list.append((.raktabija, 1.8))
-            case 18: list.append((.mahishasura, 1.0)); list.append((.ravana, 1.4)); list.append((.indrajit, 1.6)); list.append((.tarakasura, 1.8))
-            case 19: list.append((.ravana, 1.2)); list.append((.mahishasura, 1.0)); list.append((.putana, 1.5)); list.append((.tarakasura, 1.7))
+            case 15: list.append((.mahishasura, 1.2))
+            case 16: list.append((.ravana, 1.4))
+            case 17: list.append((.indrajit, 1.4)); list.append((.raktabija, 1.7))
+            case 18: list.append((.tarakasura, 1.4)); list.append((.indrajit, 1.7))
+            case 19: list.append((.ravana, 1.2)); list.append((.putana, 1.6))
             default: break
             }
 
         } else {
-            // EXTREME: every wave has 3+ bosses
+            // Late game (W20+). Still climactic but bounded.
             // FINAL: at wave 48, Kali Yuga debuts — only one ever spawned.
             if n == 48, !enemies.contains(where: { $0.kind == .kaliYuga }) {
                 list.append((.kaliYuga, 0.6))
             }
-            let p = 28 + n * 2
-            let r = 20 + (n - 19)
-            let d = 16 + (n - 19)
-            let v = 9 + (n - 19)
-            let a = 9 + (n - 19)
-            let m = 10 + (n - 19) * 2
+            let p = 18 + min(15, n - 19)
+            let r = 12 + min(10, n - 19)
+            let d = 8  + min(8,  n - 19)
+            let v = 5  + min(5,  n - 19)
+            let a = 5  + min(5,  n - 19)
+            let m = 6  + min(6,  n - 19)
             for _ in 0..<p { list.append((.pishacha, interval)) }
             for _ in 0..<r { list.append((.rakshasa, interval)) }
             for _ in 0..<d { list.append((.daitya, interval)) }
             for _ in 0..<a { list.append((.asura, interval + 0.16)) }
             for _ in 0..<v { list.append((.vetala, interval + 0.12)) }
             for _ in 0..<m { list.append((.mayavi, interval + 0.10)) }
-            // 3+ bosses per wave — Vritra (water+ice immune apex serpent) enters from W20
-            list.append((.mahishasura, 1.0))
+            // 2 bosses per wave baseline, scaling toward 3 in apex range.
             list.append((.mahishasura, 1.2))
-            list.append((.ravana, 1.4))
-            list.append((.tarakasura, 1.6))
-            list.append((.raktabija, 1.7))
-            list.append((.putana, 1.8))
-            if n % 2 == 0 { list.append((.indrajit, 1.4)) }
-            if n % 3 == 0 { list.append((.ravana, 1.2)) }
-            if n >= 20 { list.append((.vritra, 1.3)) }
-            if n >= 25 { list.append((.indrajit, 1.2)); list.append((.vritra, 1.5)) }
-            if n >= 30 {
-                // Apocalyptic: 5+ bosses
-                list.append((.mahishasura, 1.0))
-                list.append((.ravana, 1.2))
-                list.append((.vritra, 1.4))
-            }
+            list.append((.ravana, 1.5))
+            if n % 2 == 0 { list.append((.tarakasura, 1.6)) }
+            if n % 3 == 0 { list.append((.indrajit, 1.7)) }
+            if n >= 25 { list.append((.vritra, 1.4)) }
+            if n >= 35 { list.append((.raktabija, 1.5)) }
         }
 
         return scaleWaveByPath(list)
@@ -2723,7 +2722,21 @@ final class GameViewModel {
             }
             if enemies[i].freezeRemaining > 0 {
                 enemies[i].freezeRemaining -= dt
-                continue
+                enemies[i].freezeStreak += dt
+                // Anti-stall: after 3 s of continuous freeze, force-thaw
+                // and grant 1.5 s of chill immunity so the enemy can move.
+                if enemies[i].freezeStreak > 3.0 {
+                    enemies[i].freezeRemaining = 0
+                    enemies[i].freezeStreak = 0
+                    enemies[i].freezeImmunity = 1.5
+                } else {
+                    continue
+                }
+            } else {
+                enemies[i].freezeStreak = 0
+            }
+            if enemies[i].freezeImmunity > 0 {
+                enemies[i].freezeImmunity = max(0, enemies[i].freezeImmunity - dt)
             }
             let regen = enemies[i].kind.regenPerSec
             if regen > 0, enemies[i].hp > 0 {
@@ -3213,7 +3226,11 @@ final class GameViewModel {
                 enemies[index].slowFactor = min(enemies[index].slowFactor, projectile.slowFactor)
             }
             if projectile.freezeDuration > 0 {
-                enemies[index].freezeRemaining = max(enemies[index].freezeRemaining, projectile.freezeDuration)
+                // Skip re-freeze while the enemy has chill immunity from a
+                // forced thaw — prevents permanently-frozen path stalls.
+                if enemies[index].freezeImmunity <= 0 {
+                    enemies[index].freezeRemaining = max(enemies[index].freezeRemaining, projectile.freezeDuration)
+                }
             }
         }
     }
@@ -3345,7 +3362,7 @@ final class GameViewModel {
     /// Threshold of available *Bazaar points* needed for the Amrita Kalash
     /// to appear / be used. (Distinct from run-score — the HUD's heart pill
     /// + Bazaar wallet show the relevant value.)
-    static let amritaKalashCost = 2000
+    static let amritaKalashCost = 1000
     /// Lives restored when the Kalash is consumed.
     static let amritaKalashLifeGain = 40
 
