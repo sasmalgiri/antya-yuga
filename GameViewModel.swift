@@ -3286,6 +3286,9 @@ final class GameViewModel {
     func useAmritaKalash() -> Bool {
         guard payPoints(Self.amritaKalashCost) else { return false }
         lives += Self.amritaKalashLifeGain
+        // Keep the HP-bar denominator in sync so the relic display reads
+        // "63/63" instead of a stale "63/18".
+        maxLives = max(maxLives, lives)
         SoundEngine.shared.playAmritaKalash()
         HapticsEngine.shared.amritaKalashUsed()
         return true
@@ -3336,7 +3339,9 @@ final class GameViewModel {
         case .ironCache:        stock.metal += 100
         case .sageTech:         stock.tech += 60
         case .jyotishaBlessing: stock.jotisha += 80
-        case .healersBoon:      lives += 8
+        case .healersBoon:
+            lives += 8
+            maxLives = max(maxLives, lives)
         default: break
         }
     }
