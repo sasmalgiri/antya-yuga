@@ -1718,29 +1718,16 @@ final class GameViewModel {
     }
 
     private func computeSudarshanPosition() -> CGPoint {
-        // Fallbacks if the path isn't ready yet.
-        guard pathPoints.count >= 2 else {
-            if lastConfiguredSize.width > 0 && lastConfiguredSize.height > 0 {
-                return CGPoint(x: lastConfiguredSize.width / 2,
-                               y: lastConfiguredSize.height / 2)
-            }
-            return CGPoint(x: 512, y: 384)
+        // The path now terminates at screen-centre, so the Sudarshan sits
+        // exactly there — visible to the player as the heart of the map.
+        if let end = pathPoints.last {
+            return end
         }
-        let end = pathPoints.last!
-        let prev = pathPoints[pathPoints.count - 2]
-        // Continue in the direction enemies were last travelling.
-        let dx = end.x - prev.x
-        let dy = end.y - prev.y
-        let mag = max(1, hypot(dx, dy))
-        let offset: CGFloat = 90
-        var pos = CGPoint(x: end.x + (dx / mag) * offset,
-                          y: end.y + (dy / mag) * offset)
-        // Keep it visible — clamp to a safe screen margin.
         if lastConfiguredSize.width > 0 && lastConfiguredSize.height > 0 {
-            pos.x = max(60, min(lastConfiguredSize.width - 60, pos.x))
-            pos.y = max(90, min(lastConfiguredSize.height - 120, pos.y))
+            return CGPoint(x: lastConfiguredSize.width / 2,
+                           y: lastConfiguredSize.height / 2)
         }
-        return pos
+        return CGPoint(x: 512, y: 384)
     }
 
     /// Returns true if the tap was accepted (had resources, advanced charge).
@@ -1915,34 +1902,40 @@ final class GameViewModel {
         sudarshanPosition = computeSudarshanPosition()
     }
 
+    // Both paths now spiral inward from a screen edge and terminate at the
+    // Sudarshan at screen-centre. The Sudarshan is the visible goal — the
+    // enemies are visibly marching toward the relic at the heart of the map.
+
     private static func compactPath(w: CGFloat, h: CGFloat) -> [CGPoint] {
         [
-            CGPoint(x: -10,       y: h * 0.18),
-            CGPoint(x: w * 0.42,  y: h * 0.18),
-            CGPoint(x: w * 0.42,  y: h * 0.40),
-            CGPoint(x: w * 0.86,  y: h * 0.40),
-            CGPoint(x: w * 0.86,  y: h * 0.62),
-            CGPoint(x: w * 0.16,  y: h * 0.62),
-            CGPoint(x: w * 0.16,  y: h * 0.82),
-            CGPoint(x: w + 10,    y: h * 0.82)
+            CGPoint(x: -10,       y: h * 0.12),        // enter top-left edge
+            CGPoint(x: w * 0.88,  y: h * 0.12),        // hug top
+            CGPoint(x: w * 0.88,  y: h * 0.88),        // down right side
+            CGPoint(x: w * 0.12,  y: h * 0.88),        // along bottom
+            CGPoint(x: w * 0.12,  y: h * 0.32),        // up left side (inset)
+            CGPoint(x: w * 0.72,  y: h * 0.32),        // inward turn
+            CGPoint(x: w * 0.72,  y: h * 0.68),        // down
+            CGPoint(x: w * 0.50,  y: h * 0.68),        // approach centre
+            CGPoint(x: w * 0.50,  y: h * 0.50)         // arrive at Sudarshan
         ]
     }
 
     private static func largePath(w: CGFloat, h: CGFloat) -> [CGPoint] {
-        // iPad: more zig-zags to fill space + more slot opportunities
+        // iPad: an extra spiral loop before arriving at the centre.
         [
-            CGPoint(x: -10,       y: h * 0.14),
-            CGPoint(x: w * 0.30,  y: h * 0.14),
-            CGPoint(x: w * 0.30,  y: h * 0.30),
-            CGPoint(x: w * 0.70,  y: h * 0.30),
-            CGPoint(x: w * 0.70,  y: h * 0.45),
-            CGPoint(x: w * 0.20,  y: h * 0.45),
-            CGPoint(x: w * 0.20,  y: h * 0.60),
-            CGPoint(x: w * 0.85,  y: h * 0.60),
-            CGPoint(x: w * 0.85,  y: h * 0.75),
-            CGPoint(x: w * 0.15,  y: h * 0.75),
-            CGPoint(x: w * 0.15,  y: h * 0.88),
-            CGPoint(x: w + 10,    y: h * 0.88)
+            CGPoint(x: -10,       y: h * 0.10),        // enter top-left
+            CGPoint(x: w * 0.92,  y: h * 0.10),
+            CGPoint(x: w * 0.92,  y: h * 0.90),
+            CGPoint(x: w * 0.08,  y: h * 0.90),
+            CGPoint(x: w * 0.08,  y: h * 0.25),
+            CGPoint(x: w * 0.78,  y: h * 0.25),
+            CGPoint(x: w * 0.78,  y: h * 0.75),
+            CGPoint(x: w * 0.22,  y: h * 0.75),
+            CGPoint(x: w * 0.22,  y: h * 0.40),
+            CGPoint(x: w * 0.64,  y: h * 0.40),
+            CGPoint(x: w * 0.64,  y: h * 0.60),
+            CGPoint(x: w * 0.50,  y: h * 0.60),
+            CGPoint(x: w * 0.50,  y: h * 0.50)         // arrive at Sudarshan
         ]
     }
 
