@@ -1309,21 +1309,21 @@ enum EnemyKind: String, CaseIterable {
         case .daitya:         return 2
         case .asura:          return 3
         case .vetala:         return 2
-        case .mahishasura:    return 15
-        case .ravana:         return 40
+        case .mahishasura:    return 35
+        case .ravana:         return 90
         case .mayavi:         return 3
-        case .indrajit:       return 25
+        case .indrajit:       return 55
         case .lobhaYaksha:    return 4
         case .lohaAsura:      return 5
         case .yantraPishacha: return 4
         case .taraDevi:       return 5
         case .rishiAtma:      return 5
-        case .raktabija:      return 10
-        case .tarakasura:     return 22
-        case .bhasmasura:     return 8
-        case .vritra:         return 30
-        case .putana:         return 12
-        case .kaliYuga:      return 200  // victory reward
+        case .raktabija:      return 22
+        case .tarakasura:     return 50
+        case .bhasmasura:     return 18
+        case .vritra:         return 70
+        case .putana:         return 28
+        case .kaliYuga:       return 400  // victory reward (was 200)
         }
     }
 
@@ -1334,21 +1334,21 @@ enum EnemyKind: String, CaseIterable {
         case .daitya:      return 25
         case .asura:       return 42
         case .vetala:      return 30
-        case .mahishasura: return 180
-        case .ravana:      return 500
+        case .mahishasura: return 320
+        case .ravana:      return 900
         case .mayavi:      return 40
-        case .indrajit:    return 350
+        case .indrajit:    return 620
         case .lobhaYaksha:    return 55
         case .lohaAsura:      return 70
         case .yantraPishacha: return 50
         case .taraDevi:       return 65
         case .rishiAtma:      return 75
-        case .raktabija:      return 120
-        case .tarakasura:     return 280
-        case .bhasmasura:     return 90
-        case .vritra:         return 400
-        case .putana:         return 140
-        case .kaliYuga:      return 2000   // huge gold drop on victory
+        case .raktabija:      return 220
+        case .tarakasura:     return 500
+        case .bhasmasura:     return 170
+        case .vritra:         return 720
+        case .putana:         return 260
+        case .kaliYuga:       return 3500   // huge gold drop on victory (was 2000)
         }
     }
 
@@ -2440,11 +2440,13 @@ final class GameViewModel {
     static let maxAuraLevel: Int = 3
 
     /// Per-tier heal-rate and range (index by level, 0 = inactive).
-    static let healAuraRate:  [Double]  = [0, 5,   9,  14]
-    static let healAuraRange: [CGFloat] = [0, 80, 100, 130]
-    /// Per-tier shield reduction and range.
-    static let shieldAuraReduction: [Double]  = [0, 0.15, 0.22, 0.30]
-    static let shieldAuraRangeTier: [CGFloat] = [0, 80,   100,  130]
+    static let healAuraRate:  [Double]  = [0, 6,  12,  22]
+    static let healAuraRange: [CGFloat] = [0, 85, 110, 140]
+    /// Per-tier shield reduction and range. L3 now actually deflects half
+    /// of incoming damage so a fully-upgraded shield can keep nearby
+    /// towers alive through a Ravana / Vritra rampage.
+    static let shieldAuraReduction: [Double]  = [0, 0.20, 0.35, 0.50]
+    static let shieldAuraRangeTier: [CGFloat] = [0, 85,   110,  140]
 
     /// Costs to go from level N to level N+1.
     static let healAuraUpgradeCost: [Resources] = [
@@ -3340,8 +3342,10 @@ final class GameViewModel {
     /// current run; permanent items unlock cross-run bonuses.
     // MARK: - Amrita Kalash (life-revival relic)
 
-    /// Threshold of available points needed for the Amrita Kalash to appear / be used.
-    static let amritaKalashCost = 4000
+    /// Threshold of available *Bazaar points* needed for the Amrita Kalash
+    /// to appear / be used. (Distinct from run-score — the HUD's heart pill
+    /// + Bazaar wallet show the relevant value.)
+    static let amritaKalashCost = 2000
     /// Lives restored when the Kalash is consumed.
     static let amritaKalashLifeGain = 40
 
