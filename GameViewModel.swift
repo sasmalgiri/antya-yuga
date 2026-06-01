@@ -1698,16 +1698,37 @@ final class GameViewModel {
         sudarshanPhase = .charging
         sudarshanCharge = 0
         sudarshanHP = sudarshanMaxHP
-        // Center of the playfield. If `reconfigure(size:)` somehow hasn't
-        // fired yet (lastConfiguredSize is .zero), fall back to a sensible
-        // iPad-sized default so the divert-to-Sudarshan logic doesn't aim
-        // at (0, 0).
-        if lastConfiguredSize.width > 0 && lastConfiguredSize.height > 0 {
-            sudarshanPosition = CGPoint(x: lastConfiguredSize.width / 2,
-                                        y: lastConfiguredSize.height / 2)
-        } else {
-            sudarshanPosition = CGPoint(x: 512, y: 384)
+        // Place the relic in open space just past the end of the path, in
+        // the direction enemies were moving. That way Kali Yuga reaches it
+        // by following the path he was already on, and the player can drop
+        // towers in the corridor to defend it.
+        sudarshanPosition = computeSudarshanPosition()
+    }
+
+    private func computeSudarshanPosition() -> CGPoint {
+        // Fallbacks if the path isn't ready yet.
+        guard pathPoints.count >= 2 else {
+            if lastConfiguredSize.width > 0 && lastConfiguredSize.height > 0 {
+                return CGPoint(x: lastConfiguredSize.width / 2,
+                               y: lastConfiguredSize.height / 2)
+            }
+            return CGPoint(x: 512, y: 384)
         }
+        let end = pathPoints.last!
+        let prev = pathPoints[pathPoints.count - 2]
+        // Continue in the direction enemies were last travelling.
+        let dx = end.x - prev.x
+        let dy = end.y - prev.y
+        let mag = max(1, hypot(dx, dy))
+        let offset: CGFloat = 90
+        var pos = CGPoint(x: end.x + (dx / mag) * offset,
+                          y: end.y + (dy / mag) * offset)
+        // Keep it visible — clamp to a safe screen margin.
+        if lastConfiguredSize.width > 0 && lastConfiguredSize.height > 0 {
+            pos.x = max(60, min(lastConfiguredSize.width - 60, pos.x))
+            pos.y = max(90, min(lastConfiguredSize.height - 120, pos.y))
+        }
+        return pos
     }
 
     /// Returns true if the tap was accepted (had resources, advanced charge).
@@ -2575,13 +2596,16 @@ final class GameViewModel {
             // within his attack reach. Only advances after killing the tower.
             var effectiveSpeed = enemies[i].kind.speed * enemies[i].slowFactor * enemies[i].speedMultiplier
                                  * CGFloat(rageMultiplier(of: enemies[i]))
-            // Empowered Kali Yuga abandons the path entirely once every tower
-            // AND every building is gone — he marches straight for the
-            // Sudarshan to finish the player off. Guard against an
-            // uninitialised sudarshanPosition (which would point at 0,0).
+            // Empowered Kali Yuga abandons the path either when every defence
+            // has fallen OR when he reaches the end of the path — in both
+            // cases he marches the rest of the way to the Sudarshan. Guard
+            // against an uninitialised sudarshanPosition (would point at 0,0).
+            let reachedEnd = enemies[i].kind == .kaliYuga
+                && enemies[i].distance >= pathLength - 1
+            let defencesGone = towers.isEmpty && buildings.isEmpty
             if enemies[i].kind == .kaliYuga,
                sudarshanPhase == .empoweredBoss,
-               towers.isEmpty, buildings.isEmpty,
+               (defencesGone || reachedEnd),
                sudarshanPosition.x > 0 || sudarshanPosition.y > 0 {
                 let dx = sudarshanPosition.x - enemies[i].position.x
                 let dy = sudarshanPosition.y - enemies[i].position.y
@@ -2605,7 +2629,12 @@ final class GameViewModel {
             enemies[i].distance += effectiveSpeed * CGFloat(dt)
             if enemies[i].distance >= pathLength {
                 enemies[i].distance = pathLength
-                enemies[i].hp = 0
+                // Empowered Kali Yuga doesn't despawn at path end — the
+                // divert branch above will carry him on to the Sudarshan.
+                if !(enemies[i].kind == .kaliYuga
+                     && sudarshanPhase == .empoweredBoss) {
+                    enemies[i].hp = 0
+                }
             }
             let (pt, dir) = pointAndDirection(at: enemies[i].distance)
             enemies[i].position = pt
