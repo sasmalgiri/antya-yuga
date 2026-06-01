@@ -1907,36 +1907,38 @@ final class GameViewModel {
     // Sudarshan at screen-centre. The Sudarshan is the visible goal — the
     // enemies are visibly marching toward the relic at the heart of the map.
 
+    // Paths are kept inside an 8-18% margin around all screen edges so the
+    // perimeter bands stay open for building slots.
+
     private static func compactPath(w: CGFloat, h: CGFloat) -> [CGPoint] {
         [
-            CGPoint(x: -10,       y: h * 0.12),        // enter top-left edge
-            CGPoint(x: w * 0.88,  y: h * 0.12),        // hug top
-            CGPoint(x: w * 0.88,  y: h * 0.88),        // down right side
-            CGPoint(x: w * 0.12,  y: h * 0.88),        // along bottom
-            CGPoint(x: w * 0.12,  y: h * 0.32),        // up left side (inset)
-            CGPoint(x: w * 0.72,  y: h * 0.32),        // inward turn
-            CGPoint(x: w * 0.72,  y: h * 0.68),        // down
-            CGPoint(x: w * 0.50,  y: h * 0.68),        // approach centre
-            CGPoint(x: w * 0.50,  y: h * 0.50)         // arrive at Sudarshan
+            CGPoint(x: -10,       y: h * 0.10),
+            CGPoint(x: w * 0.85,  y: h * 0.10),
+            CGPoint(x: w * 0.85,  y: h * 0.78),
+            CGPoint(x: w * 0.15,  y: h * 0.78),
+            CGPoint(x: w * 0.15,  y: h * 0.28),
+            CGPoint(x: w * 0.70,  y: h * 0.28),
+            CGPoint(x: w * 0.70,  y: h * 0.62),
+            CGPoint(x: w * 0.50,  y: h * 0.62),
+            CGPoint(x: w * 0.50,  y: h * 0.50)
         ]
     }
 
     private static func largePath(w: CGFloat, h: CGFloat) -> [CGPoint] {
-        // iPad: an extra spiral loop before arriving at the centre.
         [
-            CGPoint(x: -10,       y: h * 0.10),        // enter top-left
-            CGPoint(x: w * 0.92,  y: h * 0.10),
-            CGPoint(x: w * 0.92,  y: h * 0.90),
-            CGPoint(x: w * 0.08,  y: h * 0.90),
-            CGPoint(x: w * 0.08,  y: h * 0.25),
-            CGPoint(x: w * 0.78,  y: h * 0.25),
-            CGPoint(x: w * 0.78,  y: h * 0.75),
-            CGPoint(x: w * 0.22,  y: h * 0.75),
-            CGPoint(x: w * 0.22,  y: h * 0.40),
-            CGPoint(x: w * 0.64,  y: h * 0.40),
-            CGPoint(x: w * 0.64,  y: h * 0.60),
-            CGPoint(x: w * 0.50,  y: h * 0.60),
-            CGPoint(x: w * 0.50,  y: h * 0.50)         // arrive at Sudarshan
+            CGPoint(x: -10,       y: h * 0.08),
+            CGPoint(x: w * 0.88,  y: h * 0.08),
+            CGPoint(x: w * 0.88,  y: h * 0.80),
+            CGPoint(x: w * 0.12,  y: h * 0.80),
+            CGPoint(x: w * 0.12,  y: h * 0.22),
+            CGPoint(x: w * 0.76,  y: h * 0.22),
+            CGPoint(x: w * 0.76,  y: h * 0.68),
+            CGPoint(x: w * 0.22,  y: h * 0.68),
+            CGPoint(x: w * 0.22,  y: h * 0.38),
+            CGPoint(x: w * 0.62,  y: h * 0.38),
+            CGPoint(x: w * 0.62,  y: h * 0.58),
+            CGPoint(x: w * 0.50,  y: h * 0.58),
+            CGPoint(x: w * 0.50,  y: h * 0.50)
         ]
     }
 
@@ -1974,16 +1976,16 @@ final class GameViewModel {
 
         // Edge-band pass: fill the bottom strip and the left/right margins
         // with extra grid slots so the player has placement options at the
-        // perimeter, not only adjacent to the path itself.
-        let edgeStepX: CGFloat = isLarge ? 90 : 78
-        let edgeStepY: CGFloat = isLarge ? 78 : 70
-        let leftEdgeMax: CGFloat = isLarge ? 110 : 80
-        let rightEdgeMin: CGFloat = size.width - (isLarge ? 110 : 80)
+        // perimeter, not only adjacent to the path itself. The path is
+        // confined to ~10-80% of the screen on every axis, so these bands
+        // have real room and won't collide with the path.
+        let edgeStepX: CGFloat = isLarge ? 86 : 74
+        let edgeStepY: CGFloat = isLarge ? 70 : 64
 
-        // 1) Bottom strip — two-row grid below the path's lowest extent.
-        let bottomBandTop = size.height - (isLarge ? 180 : 150)
+        // 1) Bottom strip — below the path's lowest run (0.78-0.80h).
+        let bottomBandTop = size.height * (isLarge ? 0.83 : 0.82)
         var y = bottomBandTop
-        while y < size.height - 70 {
+        while y < size.height - 50 {
             var x = edgeStepX * 0.5
             while x < size.width - edgeStepX * 0.5 {
                 let pos = CGPoint(x: x, y: y)
@@ -1997,7 +1999,28 @@ final class GameViewModel {
             y += edgeStepY
         }
 
-        // 2) Left and right edge columns — vertical strips not already filled.
+        // 2) Top strip — above the path's top run (0.08-0.10h).
+        let topBandBottom = size.height * (isLarge ? 0.05 : 0.06)
+        if topBandBottom > 60 {
+            var ty = topBandBottom
+            while ty > 50 {
+                var tx = edgeStepX * 0.5
+                while tx < size.width - edgeStepX * 0.5 {
+                    let pos = CGPoint(x: tx, y: ty)
+                    if !overlapsPath(pos, threshold: 36),
+                       !result.contains(where: { hypot($0.position.x - pos.x, $0.position.y - pos.y) < minSlotDistance }) {
+                        result.append(BuildSlot(index: idx, position: pos))
+                        idx += 1
+                    }
+                    tx += edgeStepX
+                }
+                ty -= edgeStepY
+            }
+        }
+
+        // 3) Left and right edge columns — between top and bottom strips.
+        let leftEdgeMax: CGFloat = size.width * (isLarge ? 0.10 : 0.12)
+        let rightEdgeMin: CGFloat = size.width * (isLarge ? 0.90 : 0.88)
         var sideY = topMargin
         while sideY < size.height - bottomMargin {
             for x in [edgeStepX * 0.5, size.width - edgeStepX * 0.5] {
