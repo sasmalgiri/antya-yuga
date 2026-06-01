@@ -923,8 +923,14 @@ struct BuildMenu: View {
             }
 
             if tab == .towers {
+                // Healer (sanjivani) and barrier (rekha) paths are no longer
+                // built directly — heal and shield are unlocked as aura
+                // toggles on every other tower once the matching Yug is open.
+                let buildable = TowerPath.allCases.filter {
+                    $0 != .sanjivani && $0 != .rekha
+                }
                 HStack(spacing: 5) {
-                    ForEach(TowerPath.allCases) { path in
+                    ForEach(buildable) { path in
                         Button {
                             vm.buildTower(at: slotIndex, path: path)
                         } label: {
@@ -941,9 +947,10 @@ struct BuildMenu: View {
                         )
                     }
                 }
-                Text("Long-press a tower to view its codex")
+                Text("Long-press a tower to view its codex · Heal/Shield unlock as aura toggles")
                     .font(.system(size: 8))
                     .foregroundColor(.white.opacity(0.5))
+                    .multilineTextAlignment(.center)
             } else {
                 HStack(spacing: 5) {
                     ForEach(BuildingKind.allCases) { kind in
@@ -1107,6 +1114,10 @@ struct TowerMenu: View {
             // Stone slot section
             stoneSection
 
+            // Heal / Shield aura toggles — unlocked by age, replace the
+            // removed Sanjivani and Rekha tower paths.
+            auraSection
+
             HStack(spacing: 10) {
                 upgradeButton
                 Button {
@@ -1122,6 +1133,10 @@ struct TowerMenu: View {
                 .foregroundColor(.white.opacity(0.7))
         }
         .padding(12)
+        // Cap the width so a socketed stone row (which uses a Spacer to
+        // push action buttons right) doesn't expand the whole menu to
+        // span the entire screen.
+        .frame(maxWidth: 360)
         .background(
             RoundedRectangle(cornerRadius: 14)
                 .fill(Color.black.opacity(0.85))
@@ -1131,6 +1146,82 @@ struct TowerMenu: View {
                 )
         )
         .padding(.horizontal, 8)
+    }
+
+    @ViewBuilder
+    private var auraSection: some View {
+        let healUnlocked = vm.isUnlocked(.middle)
+        let shieldUnlocked = vm.isUnlocked(.modern)
+        // Don't render the row at all if no age that unlocks an aura is open.
+        if healUnlocked || shieldUnlocked {
+            HStack(spacing: 8) {
+                if healUnlocked {
+                    auraToggle(
+                        icon: "cross.case.fill",
+                        title: "Heal",
+                        active: tower.healAuraActive,
+                        color: Color(red: 0.30, green: 0.95, blue: 0.55),
+                        cost: GameViewModel.healAuraCost,
+                        canEnable: vm.canEnableHealAura(on: tower)
+                    ) {
+                        vm.enableHealAura(towerID: tower.id)
+                    }
+                }
+                if shieldUnlocked {
+                    auraToggle(
+                        icon: "shield.checkered",
+                        title: "Shield",
+                        active: tower.shieldAuraActive,
+                        color: .cyan,
+                        cost: GameViewModel.shieldAuraCost,
+                        canEnable: vm.canEnableShieldAura(on: tower)
+                    ) {
+                        vm.enableShieldAura(towerID: tower.id)
+                    }
+                }
+            }
+        }
+    }
+
+    private func auraToggle(
+        icon: String,
+        title: String,
+        active: Bool,
+        color: Color,
+        cost: Resources,
+        canEnable: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .bold))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title)
+                        .font(.system(size: 11, weight: .heavy, design: .rounded))
+                    if active {
+                        Text("Active")
+                            .font(.system(size: 8, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.8))
+                    } else {
+                        ResourceCostRow(cost: cost, size: 7)
+                    }
+                }
+            }
+            .foregroundColor(active ? .black : .white)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .frame(maxWidth: .infinity)
+            .background(active ? color : color.opacity(0.20))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(color.opacity(active ? 0.0 : 0.55), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
+        .disabled(active || !canEnable)
+        .opacity(active ? 1.0 : (canEnable ? 1.0 : 0.45))
     }
 
     @ViewBuilder
