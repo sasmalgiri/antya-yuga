@@ -1531,6 +1531,10 @@ final class GameViewModel {
     var stock: Resources = Resources()
 
     var lives: Int = 18    // reduced from 25 — less margin for mistakes
+    /// Maximum lives at the start of a fresh run. Used by the relic HP bar.
+    var maxLives: Int = 18
+    /// Brief timer (seconds) that drives the Sudarshan relic hit-flash animation.
+    var relicHitFlash: TimeInterval = 0
     var score: Int = 0
     var wave: Int = 0
     var isWaveActive: Bool = false
@@ -1640,6 +1644,8 @@ final class GameViewModel {
         self.race = race
         stock = race.startingResources
         lives = 18 + BazaarStore.shared.bonusStartingLives + race.bonusStartingLives
+        maxLives = lives
+        relicHitFlash = 0
         activeBazaarPerks.removeAll()
         points = 0
         // Defensive: reset any lingering endgame state from a previous run
@@ -1813,6 +1819,8 @@ final class GameViewModel {
     @discardableResult
     func tapTrimurti() -> Bool {
         guard sudarshanPhase == .empoweredBoss else { return false }
+        // At max charge taps stop costing — player must press "Fire" instead.
+        guard trimurtiCharge < 1.0 else { return false }
         let cost = Self.trimurtiTapCost
         guard stock.canAfford(cost) else { return false }
         stock = stock - cost
@@ -1822,18 +1830,28 @@ final class GameViewModel {
             enemies[i].hp -= Self.trimurtiTapChipDamage
         }
         SoundEngine.shared.playBuildPlaced()
-        if trimurtiCharge >= 1.0 {
-            fireTrimurti()
-        }
         return true
     }
 
-    /// Discharges the Trimurti — instantly slays the empowered Kali Yuga.
-    private func fireTrimurti() {
+    /// Player-triggered Trimurti discharge — only valid at full charge.
+    /// The empowered Kali Yuga takes a massive but NOT auto-kill hit; if
+    /// the player chipped him hard with taps, one fire finishes him off.
+    /// Otherwise the meter resets to 0 and they keep charging.
+    @discardableResult
+    func fireTrimurtiManually() -> Bool {
+        guard sudarshanPhase == .empoweredBoss else { return false }
+        guard trimurtiCharge >= 1.0 else { return false }
+        trimurtiCharge = 0
+        // Massive but bounded hit — 40 000 damage. Tap chip (3 500 × up to
+        // ~6 taps) plus this hit usually finishes the empowered boss (60 k
+        // HP) on first fire; a player who fires too early may have to
+        // charge a second time.
         for i in enemies.indices where enemies[i].kind == .kaliYuga {
-            enemies[i].hp = 0
+            enemies[i].hp -= 40000
         }
         SoundEngine.shared.playAgeUnlocked()
+        HapticsEngine.shared.bossKilled()
+        return true
     }
 
     private var lastConfiguredSize: CGSize = .zero
@@ -2540,6 +2558,9 @@ final class GameViewModel {
             resourceBannerTimer -= dt
             if resourceBannerTimer <= 0 { resourceWaveBanner = false }
         }
+        if relicHitFlash > 0 {
+            relicHitFlash = max(0, relicHitFlash - dt)
+        }
 
         generateResources(dt: dt)
         spawnTick(dt: dt)
@@ -3191,7 +3212,11 @@ final class GameViewModel {
                 }
             }
         }
-        if lifeLoss > 0 { lives -= lifeLoss }
+        if lifeLoss > 0 {
+            lives -= lifeLoss
+            // Trigger the relic hit-flash visualisation.
+            relicHitFlash = 0.45
+        }
         if scoreGain > 0 { score += scoreGain }
         if pointGain > 0 { points += pointGain }
         stock = stock + drops
@@ -3325,6 +3350,8 @@ final class GameViewModel {
             stock = Resources()
         }
         lives = 18 + BazaarStore.shared.bonusStartingLives + (race?.bonusStartingLives ?? 0)
+        maxLives = lives
+        relicHitFlash = 0
         activeBazaarPerks.removeAll()
         points = 0
         score = 0

@@ -95,7 +95,7 @@ struct ContentView: View {
             if vm.race != nil
                && vm.sudarshanPhase == .inactive
                && (vm.sudarshanPosition.x > 0 || vm.sudarshanPosition.y > 0) {
-                SudarshanRelicView()
+                SudarshanRelicView(vm: vm)
                     .position(vm.sudarshanPosition)
                     .allowsHitTesting(false)
             }
@@ -2262,16 +2262,27 @@ struct DamageNumberView: View {
 
 // MARK: - Always-on Sudarshan relic
 
-/// Dormant Sudarshan relic shown at the path end from W1. Visually marks
-/// the player's defensive objective — the enemies are walking toward it.
-/// Replaced by SudarshanCenterTowerView once the Dvapara charging phase
-/// activates.
+/// Dormant Sudarshan relic shown at the path end from W1. Carries the
+/// player's HP (vm.lives / vm.maxLives) and flashes red when an enemy
+/// reaches it — driven by vm.relicHitFlash.
 struct SudarshanRelicView: View {
+    let vm: GameViewModel
     @State private var glow: Double = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        let hitFrac = vm.relicHitFlash / 0.45   // 1.0 at moment of hit, 0 after
+        let hpFrac = vm.maxLives > 0
+            ? max(0, min(1, Double(vm.lives) / Double(vm.maxLives)))
+            : 0
         ZStack {
+            // Damage flash overlay
+            if hitFrac > 0 {
+                Circle()
+                    .fill(Color.red.opacity(0.55 * hitFrac))
+                    .frame(width: 110, height: 110)
+                    .blendMode(.plusLighter)
+            }
             // Soft golden halo
             Circle()
                 .fill(RadialGradient(colors: [
@@ -2296,14 +2307,33 @@ struct SudarshanRelicView: View {
                 .font(.system(size: 26, weight: .heavy))
                 .foregroundColor(.yellow.opacity(0.95))
                 .shadow(color: .orange, radius: 3)
-            // Caption ribbon
+            // HP bar — color shifts green → yellow → red
+            VStack(spacing: 1) {
+                Text("\(vm.lives)/\(vm.maxLives)")
+                    .font(.system(size: 8, weight: .heavy, design: .rounded))
+                    .foregroundColor(.white)
+                    .shadow(color: .black, radius: 2)
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.black.opacity(0.65))
+                        .frame(width: 64, height: 5)
+                    Capsule()
+                        .fill(hpFrac > 0.5 ? Color.green
+                              : hpFrac > 0.25 ? Color.yellow : Color.red)
+                        .frame(width: 64 * CGFloat(hpFrac), height: 5)
+                }
+                .overlay(Capsule().stroke(Color.white.opacity(0.5), lineWidth: 0.5))
+            }
+            .offset(y: 42)
+            // Caption
             Text("Sudarshan")
                 .font(.system(size: 8, weight: .heavy, design: .rounded))
                 .foregroundColor(.yellow)
                 .shadow(color: .black, radius: 2)
-                .offset(y: 38)
+                .offset(y: 60)
         }
         .frame(width: 80, height: 80)
+        .scaleEffect(1.0 + 0.10 * CGFloat(hitFrac))
         .onAppear {
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
@@ -2523,28 +2553,54 @@ struct TrimurtiCenterTowerView: View {
                     .offset(y: 38)
                     .shadow(color: .black, radius: 2)
             }
-            Button {
-                vm.tapTrimurti()
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "flame.fill")
-                    Text("Charge Trimurti")
-                        .font(.system(size: 11, weight: .heavy, design: .rounded))
-                    Text("300g·30×4")
-                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+            // At full charge the button becomes the manual FIRE trigger.
+            if vm.trimurtiCharge >= 1.0 {
+                Button {
+                    vm.fireTrimurtiManually()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "burst.fill")
+                            .font(.system(size: 14, weight: .heavy))
+                        Text("FIRE TRIMURTI")
+                            .font(.system(size: 12, weight: .heavy, design: .rounded))
+                    }
+                    .foregroundColor(.black)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 7)
+                    .background(
+                        Capsule().fill(LinearGradient(colors: [
+                            Color.yellow, Color.orange
+                        ], startPoint: .top, endPoint: .bottom))
+                    )
+                    .overlay(Capsule().stroke(Color.white.opacity(0.9), lineWidth: 1.5))
+                    .shadow(color: .yellow.opacity(0.9), radius: 8)
+                    .scaleEffect(1.0 + 0.05 * pulse)
                 }
-                .foregroundColor(.white)
-                .padding(.horizontal, 11)
-                .padding(.vertical, 5)
-                .background(
-                    Capsule().fill(LinearGradient(colors: [
-                        Color(red: 0.85, green: 0.12, blue: 0.12),
-                        Color(red: 0.55, green: 0.05, blue: 0.05)
-                    ], startPoint: .top, endPoint: .bottom))
-                )
-                .overlay(Capsule().stroke(Color.yellow.opacity(0.7), lineWidth: 1))
+                .buttonStyle(.plain)
+            } else {
+                Button {
+                    vm.tapTrimurti()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "flame.fill")
+                        Text("Charge Trimurti")
+                            .font(.system(size: 11, weight: .heavy, design: .rounded))
+                        Text("300g·30×4")
+                            .font(.system(size: 9, weight: .semibold, design: .rounded))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 11)
+                    .padding(.vertical, 5)
+                    .background(
+                        Capsule().fill(LinearGradient(colors: [
+                            Color(red: 0.85, green: 0.12, blue: 0.12),
+                            Color(red: 0.55, green: 0.05, blue: 0.05)
+                        ], startPoint: .top, endPoint: .bottom))
+                    )
+                    .overlay(Capsule().stroke(Color.yellow.opacity(0.7), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
             Text("Sudarshan + Brahmastra + Trishul")
                 .font(.system(size: 8, weight: .semibold))
                 .foregroundColor(.white.opacity(0.65))
