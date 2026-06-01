@@ -2136,7 +2136,9 @@ struct AmritaKalashButton: View {
                     .scaleEffect(consumed ? 1.4 : 1.0)
                     .opacity(consumed ? 0.0 : 1.0)
                 HStack(spacing: 4) {
-                    Image(systemName: "sparkle").font(.system(size: 9, weight: .bold))
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(.cyan)
                     Text("\(GameViewModel.amritaKalashCost) → +\(GameViewModel.amritaKalashLifeGain) lives")
                         .font(.system(size: 11, weight: .heavy, design: .rounded))
                         .monospacedDigit()

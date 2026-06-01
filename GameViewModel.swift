@@ -3359,20 +3359,22 @@ final class GameViewModel {
     /// current run; permanent items unlock cross-run bonuses.
     // MARK: - Amrita Kalash (life-revival relic)
 
-    /// Threshold of available *Bazaar points* needed for the Amrita Kalash
-    /// to appear / be used. (Distinct from run-score — the HUD's heart pill
-    /// + Bazaar wallet show the relevant value.)
-    static let amritaKalashCost = 1000
+    /// Threshold of *run score* needed for the Amrita Kalash to appear and
+    /// be used. Score is the cyan star pill in the HUD next to the heart —
+    /// it accumulates from every enemy kill and wave-clear bonus.
+    static let amritaKalashCost = 2000
     /// Lives restored when the Kalash is consumed.
     static let amritaKalashLifeGain = 40
 
-    var canUseAmritaKalash: Bool { availablePoints >= Self.amritaKalashCost }
+    var canUseAmritaKalash: Bool { score >= Self.amritaKalashCost }
 
-    /// Spends 5000 points and restores 25 lives. The Kalash icon stays
-    /// visible only while the player can afford it.
+    /// Spends `amritaKalashCost` points of run-score and restores
+    /// `amritaKalashLifeGain` lives. The Kalash icon is visible only while
+    /// the player's score is at or above the threshold.
     @discardableResult
     func useAmritaKalash() -> Bool {
-        guard payPoints(Self.amritaKalashCost) else { return false }
+        guard score >= Self.amritaKalashCost else { return false }
+        score -= Self.amritaKalashCost
         lives += Self.amritaKalashLifeGain
         // Keep the HP-bar denominator in sync so the relic display reads
         // "63/63" instead of a stale "63/18".
