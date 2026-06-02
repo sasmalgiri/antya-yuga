@@ -2142,51 +2142,52 @@ final class GameViewModel {
         SoundEngine.shared.playWaveStart()
     }
 
+    /// The total number of pre-endgame waves before Kali Yuga arrives.
+    /// Decreasing this here cascades through the rest of the wave brackets
+    /// and the "Awaiting Kali Yuga · Wave X" UI label.
+    static let kaliYugaArrivalWave: Int = 24
+
     private func buildWave(_ n: Int) -> [(EnemyKind, TimeInterval)] {
         var list: [(EnemyKind, TimeInterval)] = []
         let interval = Difficulty.spawnInterval(baseWave: n)
 
-        // Every 7 waves is a BOON WAVE
+        // Boon wave every 7 (W7, W14, W21) — same cadence inside the
+        // shorter 24-wave arc.
         if n % 7 == 0 && n >= 7 {
             return scaleWaveByPath(buildBoonWave(n))
         }
 
-        if n <= 4 {
-            // Intro: Pishacha + a few Rakshasa, very gentle ramp
-            let p = 4 + n * 2
-            let r = max(0, n - 2)
+        if n <= 2 {
+            // Intro: Pishacha swarm with a couple of Rakshasa.
+            let p = 4 + n * 3
+            let r = max(0, n - 1)
             for _ in 0..<p { list.append((.pishacha, interval)) }
             for _ in 0..<r { list.append((.rakshasa, interval)) }
 
-        } else if n <= 8 {
-            // Mayavi now appears from W6 — sensory required earlier.
-            // Bhasmasura (fire-immune fast tower-burner) enters from W6 — forces ice/water/divine play.
+        } else if n <= 4 {
+            // Mahishasura debut + Bhasmasura intro (fire-immune lane).
             let p = 8 + n
-            let r = 5 + (n - 4)
-            let d = max(0, n - 5) * 2
-            let m = max(0, n - 5)
-            let bh = max(0, n - 5)
+            let r = 4 + (n - 2)
+            let d = max(0, n - 2) * 2
+            let m = max(0, n - 2)
+            let bh = max(0, n - 2)
             for _ in 0..<p { list.append((.pishacha, interval)) }
             for _ in 0..<r { list.append((.rakshasa, interval)) }
             for _ in 0..<d { list.append((.daitya, interval + 0.20)) }
             for _ in 0..<m { list.append((.mayavi, interval + 0.10)) }
             for _ in 0..<bh { list.append((.bhasmasura, interval + 0.18)) }
-            if n == 5 { list.append((.mahishasura, 1.4)) }
-            if n == 6 { list.append((.mahishasura, 1.3)) }
-            if n == 7 { list.append((.mahishasura, 1.2)); list.append((.daitya, 1.5)) }
-            if n == 8 { list.append((.mahishasura, 1.1)); list.append((.mahishasura, 1.4)) }  // DOUBLE Mahisha at W8
+            if n == 3 { list.append((.mahishasura, 1.4)) }
+            if n == 4 { list.append((.mahishasura, 1.2)) }
 
-        } else if n <= 12 {
-            // Vetala (ice+water imm) + Mayavi (invisible) appear from W9+
-            // Sensory + multi-damage becomes mandatory.
-            // Raktabija (phys-immune + regen) and Putana (divine-only) enter here.
-            let p = 8 + n
-            let r = 6 + (n - 8)
-            let d = 3 + (n - 8)
-            let v = max(0, n - 9)
-            let m = max(0, n - 8) * 2   // invisible pressure
-            let bh = 1 + (n - 9)
-            let rb = max(0, n - 9)
+        } else if n <= 6 {
+            // Vetala + sustained Mayavi pressure. Raktabija + Putana debut.
+            let p = 10 + n
+            let r = 6 + (n - 4)
+            let d = 3 + (n - 4)
+            let v = max(0, n - 4)
+            let m = max(0, n - 4) * 2
+            let bh = 1 + (n - 4)
+            let rb = max(0, n - 4)
             for _ in 0..<p { list.append((.pishacha, interval)) }
             for _ in 0..<r { list.append((.rakshasa, interval)) }
             for _ in 0..<d { list.append((.daitya, interval + 0.15)) }
@@ -2194,90 +2195,82 @@ final class GameViewModel {
             for _ in 0..<m { list.append((.mayavi, interval + 0.10)) }
             for _ in 0..<bh { list.append((.bhasmasura, interval + 0.18)) }
             for _ in 0..<rb { list.append((.raktabija, interval + 0.25)) }
-            if n == 9  { list.append((.mahishasura, 1.3)) }
-            if n == 10 {
-                // First multi-boss wave: 2 Mahishasuras
-                list.append((.mahishasura, 1.1))
-                list.append((.mahishasura, 1.3))
-            }
-            if n == 11 { list.append((.mahishasura, 1.2)); list.append((.putana, 1.7)) }
-            if n == 12 {
-                // Mahisha + invisible Indrajit (forces sensory by now)
-                list.append((.mahishasura, 1.0))
-                list.append((.indrajit, 1.5))
-                list.append((.putana, 1.8))
-            }
+            if n == 5 { list.append((.mahishasura, 1.2)); list.append((.putana, 1.7)) }
+            if n == 6 { list.append((.mahishasura, 1.0)); list.append((.indrajit, 1.5)) }
 
-        } else if n <= 14 {
-            // Asura (physical-immune) joins. Counts trimmed so waves feel
-            // finite instead of dragging on for minutes.
-            let p = 12 + n
-            let r = 8 + (n - 12)
-            let d = 5 + (n - 12)
-            let v = 3 + (n - 12)
-            let a = 2 + (n - 12)
-            let m = 4 + (n - 12)
+        } else if n <= 8 {
+            // Tarakasura debuts. Single signature boss.
+            let p = 13 + (n - 6)
+            let r = 8 + (n - 6)
+            let d = 5 + (n - 6)
+            let v = 3 + (n - 6)
+            let a = 2 + (n - 6)
+            let m = 4 + (n - 6)
             for _ in 0..<p { list.append((.pishacha, interval)) }
             for _ in 0..<r { list.append((.rakshasa, interval)) }
             for _ in 0..<d { list.append((.daitya, interval)) }
             for _ in 0..<a { list.append((.asura, interval + 0.18)) }
             for _ in 0..<v { list.append((.vetala, interval + 0.12)) }
             for _ in 0..<m { list.append((.mayavi, interval + 0.10)) }
-            // ONE big boss per wave instead of three — keeps the spotlight
-            // on a single fight rather than a multi-boss pile.
-            if n == 13 { list.append((.tarakasura, 1.5)) }
-            if n == 14 { list.append((.raktabija, 1.5)) }
+            if n == 7 { list.append((.tarakasura, 1.5)) }
+            if n == 8 { list.append((.raktabija, 1.5)) }
 
-        } else if n <= 19 {
-            // Bosses mixed in — but counts capped so each wave fits a
-            // reasonable timeframe.
-            let p = 14 + (n - 14)
-            let r = 10 + (n - 14)
-            let d = 7 + (n - 14)
-            let v = 4 + (n - 14)
-            let a = 4 + (n - 14)
-            let m = 5 + (n - 14)
+        } else if n <= 13 {
+            // Mid-game: bosses mixed in, one signature per wave.
+            let p = 15 + (n - 8)
+            let r = 10 + (n - 8)
+            let d = 7 + (n - 8)
+            let v = 4 + (n - 8)
+            let a = 4 + (n - 8)
+            let m = 5 + (n - 8)
             for _ in 0..<p { list.append((.pishacha, interval)) }
             for _ in 0..<r { list.append((.rakshasa, interval)) }
             for _ in 0..<d { list.append((.daitya, interval)) }
             for _ in 0..<a { list.append((.asura, interval + 0.16)) }
             for _ in 0..<v { list.append((.vetala, interval + 0.12)) }
             for _ in 0..<m { list.append((.mayavi, interval + 0.10)) }
-            // 1-2 bosses per wave only.
             switch n {
-            case 15: list.append((.mahishasura, 1.2))
-            case 16: list.append((.ravana, 1.4))
-            case 17: list.append((.indrajit, 1.4)); list.append((.raktabija, 1.7))
-            case 18: list.append((.tarakasura, 1.4)); list.append((.indrajit, 1.7))
-            case 19: list.append((.ravana, 1.2)); list.append((.putana, 1.6))
+            case 9:  list.append((.mahishasura, 1.2))
+            case 10: list.append((.ravana, 1.4))
+            case 11: list.append((.indrajit, 1.4)); list.append((.raktabija, 1.7))
+            case 12: list.append((.tarakasura, 1.4)); list.append((.indrajit, 1.7))
+            case 13: list.append((.ravana, 1.2)); list.append((.putana, 1.6))
             default: break
             }
 
-        } else {
-            // Late game (W20+). Still climactic but bounded.
-            // FINAL: at wave 48, Kali Yuga debuts — only one ever spawned.
-            if n == 48, !enemies.contains(where: { $0.kind == .kaliYuga }) {
-                list.append((.kaliYuga, 0.6))
-            }
-            let p = 18 + min(15, n - 19)
-            let r = 12 + min(10, n - 19)
-            let d = 8  + min(8,  n - 19)
-            let v = 5  + min(5,  n - 19)
-            let a = 5  + min(5,  n - 19)
-            let m = 6  + min(6,  n - 19)
+        } else if n < Self.kaliYugaArrivalWave {
+            // W14-23 late game — capped growth, Vritra debuts at W17.
+            let above = n - 13
+            let p = 18 + min(8, above)
+            let r = 12 + min(6, above)
+            let d = 8  + min(5, above)
+            let v = 5  + min(4, above)
+            let a = 5  + min(4, above)
+            let m = 6  + min(5, above)
             for _ in 0..<p { list.append((.pishacha, interval)) }
             for _ in 0..<r { list.append((.rakshasa, interval)) }
             for _ in 0..<d { list.append((.daitya, interval)) }
             for _ in 0..<a { list.append((.asura, interval + 0.16)) }
             for _ in 0..<v { list.append((.vetala, interval + 0.12)) }
             for _ in 0..<m { list.append((.mayavi, interval + 0.10)) }
-            // 2 bosses per wave baseline, scaling toward 3 in apex range.
             list.append((.mahishasura, 1.2))
             list.append((.ravana, 1.5))
             if n % 2 == 0 { list.append((.tarakasura, 1.6)) }
             if n % 3 == 0 { list.append((.indrajit, 1.7)) }
-            if n >= 25 { list.append((.vritra, 1.4)) }
-            if n >= 35 { list.append((.raktabija, 1.5)) }
+            if n >= 17 { list.append((.vritra, 1.4)) }
+            if n >= 20 { list.append((.raktabija, 1.5)) }
+
+        } else {
+            // W24: Kali Yuga debuts — only one ever spawned.
+            if n == Self.kaliYugaArrivalWave,
+               !enemies.contains(where: { $0.kind == .kaliYuga }) {
+                list.append((.kaliYuga, 0.6))
+            }
+            // Light escort so the final wave isn't lonely.
+            for _ in 0..<14 { list.append((.pishacha, interval)) }
+            for _ in 0..<8  { list.append((.rakshasa, interval)) }
+            for _ in 0..<5  { list.append((.daitya, interval)) }
+            for _ in 0..<3  { list.append((.mayavi, interval + 0.10)) }
         }
 
         return scaleWaveByPath(list)

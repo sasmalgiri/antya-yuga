@@ -2399,7 +2399,7 @@ struct SudarshanCenterTowerView: View {
                     if vm.sudarshanCharge < 1.0 {
                         return "\(Int(vm.sudarshanCharge * 100))%"
                     } else if vm.finalBoss == nil {
-                        return "Wait W48"
+                        return "Wait W\(GameViewModel.kaliYugaArrivalWave)"
                     } else {
                         return "Ready"
                     }
@@ -2411,7 +2411,7 @@ struct SudarshanCenterTowerView: View {
                     .shadow(color: .black, radius: 2)
             }
             if vm.sudarshanCharge >= 1.0 && vm.finalBoss == nil {
-                Text("Awaiting Kali Yuga · Wave 48")
+                Text("Awaiting Kali Yuga · Wave \(GameViewModel.kaliYugaArrivalWave)")
                     .font(.system(size: 9, weight: .heavy, design: .rounded))
                     .foregroundColor(.yellow.opacity(0.9))
                     .shadow(color: .black, radius: 2)
