@@ -116,7 +116,7 @@ tower defense,strategy,indian mythology,ramayana,mahabharata,sudarshana,chakra,d
 ## Support URL
 
 ```
-https://[your-hosting-domain]/support.html
+https://sasmalgiri.github.io/antya-yuga/support.html
 ```
 (e.g. `https://sasmalgiri.github.io/anta-yuga/support.html`)
 
@@ -125,7 +125,7 @@ https://[your-hosting-domain]/support.html
 ## Marketing URL (optional)
 
 ```
-https://[your-hosting-domain]/
+https://sasmalgiri.github.io/antya-yuga/
 ```
 
 ---
@@ -133,7 +133,7 @@ https://[your-hosting-domain]/
 ## Privacy Policy URL
 
 ```
-https://[your-hosting-domain]/privacy.html
+https://sasmalgiri.github.io/antya-yuga/privacy.html
 ```
 
 ---
