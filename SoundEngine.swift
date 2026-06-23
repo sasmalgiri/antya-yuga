@@ -193,6 +193,24 @@ final class SoundEngine: @unchecked Sendable {
         speakSloka(.amritaKalash)
     }
 
+    /// Shankha (conch shell) call — fired when the three Trimurti
+    /// powers converge and the Sanskrit "दुर्गा" blooms on Kali.
+    /// A long, sonorous brass note layered with a low harmonic so it
+    /// sounds like the ceremonial conch from a temple.
+    func playShankha() {
+        guard enabled, !isMuted else { return }
+        // Conch — long sustained note, slow sweep upward, with a deep
+        // low harmonic underneath for the body of the shell tone.
+        play(profile: SoundProfile(
+            frequency: 261,      // C4 base
+            duration: 1.40,      // long sustain
+            waveform: .sine,
+            volume: 0.40,
+            sweepTo: 392,        // sweep to G4
+            harmonic: 131        // C3 sub-octave body
+        ))
+    }
+
     // MARK: - Sanskrit sloka voice lines
 
     /// Picks a sloka for the event, applies cooldown, and speaks it via
@@ -288,6 +306,8 @@ final class SoundEngine: @unchecked Sendable {
             return SoundProfile(frequency: 1500, duration: 0.05, waveform: .square, volume: 0.10)
         case .aindrastra:
             return SoundProfile(frequency: 700, duration: 0.12, waveform: .square, volume: 0.15, sweepTo: 1400)
+        case .shaktiAstra:
+            return SoundProfile(frequency: 800, duration: 0.14, waveform: .square, volume: 0.18, sweepTo: 1600, harmonic: 1200)
         case .sudarshanaChakra:
             return SoundProfile(frequency: 400, duration: 0.18, waveform: .sine, volume: 0.22, sweepTo: 900, harmonic: 600)
 
@@ -296,6 +316,8 @@ final class SoundEngine: @unchecked Sendable {
             return SoundProfile(frequency: 220, duration: 0.15, waveform: .triangle, volume: 0.18, sweepTo: 130)
         case .suryastra:
             return SoundProfile(frequency: 660, duration: 0.18, waveform: .triangle, volume: 0.24, harmonic: 330)
+        case .rudraAstra:
+            return SoundProfile(frequency: 180, duration: 0.22, waveform: .triangle, volume: 0.28, sweepTo: 90, harmonic: 360)
         case .brahmashirsha:
             return SoundProfile(frequency: 90, duration: 0.30, waveform: .sine, volume: 0.35, sweepTo: 40)
 
@@ -320,6 +342,16 @@ final class SoundEngine: @unchecked Sendable {
             return SoundProfile(frequency: 330, duration: 0.12, waveform: .square, volume: 0.22, harmonic: 660)
         case .vajrastra:
             return SoundProfile(frequency: 880, duration: 0.10, waveform: .noise, volume: 0.30)
+        case .narayanaAstra:
+            return SoundProfile(frequency: 440, duration: 0.20, waveform: .square, volume: 0.32, sweepTo: 1320, harmonic: 880)
+        case .mayaAstra:
+            return SoundProfile(frequency: 600, duration: 0.10, waveform: .triangle, volume: 0.14, sweepTo: 1500)
+        case .gangaAstra:
+            return SoundProfile(frequency: 800, duration: 0.16, waveform: .sine, volume: 0.18, sweepTo: 1100, harmonic: 1320)
+        case .anjalikaAstra:
+            return SoundProfile(frequency: 520, duration: 0.18, waveform: .square, volume: 0.24, sweepTo: 1760, harmonic: 880)
+        case .brahmasiraAstra:
+            return SoundProfile(frequency: 300, duration: 0.32, waveform: .sine, volume: 0.36, sweepTo: 1320, harmonic: 660)
         case .pashupatastra:
             return SoundProfile(frequency: 55, duration: 0.50, waveform: .sine, volume: 0.42, sweepTo: 880, harmonic: 220)
 
@@ -392,6 +424,9 @@ final class SoundEngine: @unchecked Sendable {
             return SoundProfile(frequency: 1100, duration: 0.20, waveform: .sine, volume: 0.18, harmonic: 1650)
         case .rishiAtma:
             return SoundProfile(frequency: 660, duration: 0.25, waveform: .sine, volume: 0.18, sweepTo: 1320, harmonic: 990)
+        case .maniMurta:
+            // Crystalline gem shatter — bright high chime with sweep
+            return SoundProfile(frequency: 1760, duration: 0.22, waveform: .sine, volume: 0.20, sweepTo: 880, harmonic: 1320)
 
         // Specialist demons — themed tones
         case .raktabija:

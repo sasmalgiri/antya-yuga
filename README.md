@@ -54,4 +54,4 @@ The app collects nothing and transmits no data. Gameplay state lives in
 
 ## Licence
 
-© Shirshendu Sasmal. All rights reserved.
+© EcoSanskriti Innovation. All rights reserved.

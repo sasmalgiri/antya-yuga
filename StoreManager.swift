@@ -2,17 +2,27 @@
 //  StoreManager.swift
 //  towerlogicstrategicgame
 //
-//  StoreKit 2 wrapper for the four consumable point packs.
+//  StoreKit 2 wrapper for the three consumable Bazaar Point packs.
 //
 //  Before shipping, register these product IDs in App Store Connect as
-//  CONSUMABLE in-app purchases (matching the IDs in PointBundle.all):
-//      pack.small   — 50 points
-//      pack.medium  — 200 points
-//      pack.large   — 500 points
-//      pack.huge    — 1200 points
+//  CONSUMABLE in-app purchases (must match `PointBundle.all` in
+//  BazaarStore.swift):
 //
-//  For local development, add a `.storekit` configuration file to the scheme
-//  with the same IDs so the StoreKit sheet appears during testing.
+//      pack.small   →  1,000 Bazaar Points   →  Tier 1 ($0.99)
+//      pack.medium  →  3,500 Bazaar Points   →  Tier 3 ($2.99)
+//      pack.large   →  9,000 Bazaar Points   →  Tier 5 ($4.99)
+//
+//  In App Store Connect → My Apps → (your app) → Features → In-App
+//  Purchases → "+" → Consumable, set:
+//      • Reference Name: "Starter Bazaar Pack" / "Hero Bazaar Pack" / "Maharaja Bazaar Pack"
+//      • Product ID: pack.small  /  pack.medium  /  pack.large
+//      • Cleared for Sale: yes
+//      • Price Tier: 1 / 3 / 5 (or whatever localizes to $0.99 / $2.99 / $4.99)
+//      • Display Name + Description (any language you support)
+//      • Review Screenshot (1024×1024 of the in-game bazaar)
+//
+//  For local development, add a `.storekit` configuration file to the
+//  scheme with the same IDs so the StoreKit sheet appears during testing.
 //
 
 import Foundation

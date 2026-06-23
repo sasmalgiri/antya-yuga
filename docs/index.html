@@ -3,84 +3,243 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Antya Yuga — Tower defence inspired by Indian itihāsa</title>
-<meta name="description" content="Defend dharma across three Yugas with 24 divine astras, 14 mythological enemies, and 4 dynasties." />
+<title>Anta Yuga — Defend dharma across three Yugas</title>
+<meta name="description" content="Anta Yuga is a strategic tower-defence game inspired by Indian itihāsa. Wield 30+ divine astras, summon the Sudarshana Chakra, and turn back the demon horde led by Kali Yuga." />
+<meta property="og:title" content="Anta Yuga" />
+<meta property="og:description" content="A tower-defence game inspired by Indian itihāsa. Three Yugas, nine dynasties, the Sudarshana Chakra." />
+<meta property="og:image" content="icon-1024.png" />
+<meta name="theme-color" content="#0a0518" />
+<link rel="icon" href="icon-512.png" />
+<link rel="apple-touch-icon" href="icon-512.png" />
 <link rel="stylesheet" href="style.css" />
 </head>
-<body>
-<div class="container">
+<body class="landing">
+
+<!-- Animated starfield background -->
+<div class="starfield" aria-hidden="true">
+  <div class="stars stars-1"></div>
+  <div class="stars stars-2"></div>
+  <div class="stars stars-3"></div>
+  <div class="aurora"></div>
+</div>
+
+<div class="container landing-container">
 
   <header class="site">
     <div class="brand">
-      <span class="badge">⚔</span>
-      <span>Antya Yuga</span>
+      <img src="icon-512.png" alt="" class="brand-icon" />
+      <span>Anta Yuga</span>
     </div>
     <nav class="site">
       <a href="#features">Features</a>
+      <a href="#screens">Screens</a>
+      <a href="#yugas">Yugas</a>
       <a href="support.html">Support</a>
       <a href="privacy.html">Privacy</a>
-      <a href="terms.html">Terms</a>
     </nav>
   </header>
 
-  <section class="hero">
-    <h1>Defend the cosmos with divine astras.</h1>
-    <p class="tagline">
-      A strategic tower-defence game inspired by Indian itihāsa. Choose your dynasty,
-      unfold three yugas of progression, wield 24 named astras, and turn back demon
-      hordes led by Ravana, Mahishasura, and Indrajit.
-    </p>
-    <div class="cta-row">
-      <a class="btn primary" href="#">Download on the App Store</a>
-      <a class="btn" href="support.html">Support</a>
+  <!-- ─────────── HERO ─────────── -->
+  <section class="hero hero-landing">
+    <div class="hero-text">
+      <p class="eyebrow">⚔ A tower defence inspired by Indian itihāsa</p>
+      <h1 class="hero-title">Defend the cosmos<br/>with divine astras.</h1>
+      <p class="tagline">
+        Three Yugas. Nine dynasties. Thirty divine weapons. One spinning
+        Sudarshana Chakra between dharma and Kali's final age.
+      </p>
+      <div class="cta-row">
+        <a class="btn primary big" href="#download">
+          <span>Download on the App Store</span>
+        </a>
+        <a class="btn big" href="#features">See what's inside</a>
+      </div>
+      <p class="muted hero-meta">
+        iPhone &middot; iPad &middot; macOS &middot; Free to play &middot; Optional Bazaar points
+      </p>
     </div>
-    <p class="muted" style="margin-top:18px;">
-      iOS &amp; iPadOS · Free to play · Optional in-app purchases
-    </p>
+    <div class="hero-art">
+      <div class="icon-halo"></div>
+      <img src="icon-1024.png" alt="Anta Yuga app icon" class="hero-icon" />
+    </div>
   </section>
 
+  <!-- ─────────── STAT STRIP ─────────── -->
+  <section class="stat-strip">
+    <div class="stat"><span class="num">3</span><span class="lbl">Yugas</span></div>
+    <div class="stat"><span class="num">9</span><span class="lbl">Dynasties</span></div>
+    <div class="stat"><span class="num">30+</span><span class="lbl">Astras</span></div>
+    <div class="stat"><span class="num">14+</span><span class="lbl">Demons & Bosses</span></div>
+    <div class="stat"><span class="num">5</span><span class="lbl">Resources</span></div>
+    <div class="stat"><span class="num">0</span><span class="lbl">Trackers</span></div>
+  </section>
+
+  <!-- ─────────── FEATURES GRID ─────────── -->
   <section id="features">
-    <h2>What's inside</h2>
+    <h2>What lives inside</h2>
+    <p class="section-lede">
+      Anta Yuga is a tower-defence at heart but a dharma epic in scope. Every
+      run is its own self-contained Mahabharata in miniature — pick a dynasty,
+      pick a difficulty, march through three Yugas, and end Kali.
+    </p>
     <div class="grid">
-      <div class="card">
-        <h3>4 dynasties</h3>
-        <p>Raghuvansh, Sen, Pal and Maurya — each with a distinct combat and economy bonus.</p>
+      <div class="card glass">
+        <div class="card-icon">🏰</div>
+        <h3>Nine dynasties</h3>
+        <p>Raghuvansh, Maurya, Gupta, Pratihara, Rashtrakuta, Pal, Chola, Sen, Ahom — each with a unique combat or economy signature.</p>
       </div>
-      <div class="card">
-        <h3>24 divine astras</h3>
-        <p>From the humble Dart to the apex Pashupatastra, evolved across three yugas.</p>
+      <div class="card glass">
+        <div class="card-icon">⚡</div>
+        <h3>Thirty divine astras</h3>
+        <p>From the humble Dart Astra to apex T4 ultimates like Sudarshana, Brahmasira, Bhambhrastra and Pashupatastra.</p>
       </div>
-      <div class="card">
-        <h3>14 mythological foes</h3>
-        <p>Demon swarms, resource bearers, and boss tiers like Ravana with damage immunities.</p>
+      <div class="card glass">
+        <div class="card-icon">👹</div>
+        <h3>Mythological enemies</h3>
+        <p>Pishachas, Rakshasas and resource bearers march under bosses Mahishasura, Ravana, Indrajit, Vritra, Bhasmasura, Putana, Kali.</p>
       </div>
-      <div class="card">
-        <h3>5-resource economy</h3>
-        <p>Gold, Metal, Tech, Jotisha and Veda — gathered by buildings during waves.</p>
-      </div>
-      <div class="card">
+      <div class="card glass">
+        <div class="card-icon">💠</div>
         <h3>Power stones</h3>
-        <p>Chuni, Panna, Nila and Raktamukhi sockets to deepen tower builds.</p>
+        <p>Socket Chuni, Panna, Nila and Raktamukhi into towers for timed amplification — and pay for the Wall emergency shield.</p>
       </div>
-      <div class="card">
+      <div class="card glass">
+        <div class="card-icon">🪙</div>
+        <h3>Five-resource economy</h3>
+        <p>Gold, Metal, Tech, Jotisha, Veda — gathered by resource buildings during waves to feed mid-run upgrades.</p>
+      </div>
+      <div class="card glass">
+        <div class="card-icon">🛕</div>
         <h3>Bazaar &amp; perks</h3>
-        <p>Spend Bazaar points on in-run boosts, run-long buffs and permanent unlocks.</p>
+        <p>Bazaar points spent on instant items, run-long buffs, and permanent unlocks that carry across runs.</p>
+      </div>
+      <div class="card glass">
+        <div class="card-icon">🌀</div>
+        <h3>Sudarshana Chakra</h3>
+        <p>Feed the central relic gold. At 100% charge the chakra ignites at the Kali wave and burns the dark age at 1,650 DPS.</p>
+      </div>
+      <div class="card glass">
+        <div class="card-icon">🌳</div>
+        <h3>Parijata Briksha</h3>
+        <p>A wish-tree that compounds every divine kill — late-game endgame production scales with the player's faith.</p>
+      </div>
+      <div class="card glass">
+        <div class="card-icon">🔒</div>
+        <h3>No tracking, ever</h3>
+        <p>No analytics SDK. No ad SDK. No accounts. UserDefaults stays on your device. Your run is yours alone.</p>
       </div>
     </div>
   </section>
 
-  <section>
+  <!-- ─────────── YUGAS ─────────── -->
+  <section id="yugas">
+    <h2>Three Yugas, one fight</h2>
+    <p class="section-lede">
+      Every run traverses Satya, Treta and Dvapara. Each yuga unlocks heavier
+      astras but bumps enemy power. Reach W14 and Kali Yuga arrives.
+    </p>
+    <div class="yuga-row">
+      <div class="yuga-card glass">
+        <div class="yuga-glyph">☀</div>
+        <h3>Satya Yug</h3>
+        <p class="muted-sub">Waves 1 – 5</p>
+        <p>The age of truth. Build your first towers. Pishachas and Rakshasas swarm. Enemy power baseline.</p>
+      </div>
+      <div class="yuga-card glass">
+        <div class="yuga-glyph">🔥</div>
+        <h3>Treta Yug</h3>
+        <p class="muted-sub">Waves 6 – 10</p>
+        <p>Heal auras unlock. Mahishasura, Ravana and Indrajit begin to march. Enemy power +20%.</p>
+      </div>
+      <div class="yuga-card glass">
+        <div class="yuga-glyph">⚔</div>
+        <h3>Dvapara Yug</h3>
+        <p class="muted-sub">Waves 11 – 13</p>
+        <p>Shield auras unlock. Vritra, Bhasmasura and Putana lead the breach. Feed the Sudarshana. Enemy power +50%.</p>
+      </div>
+      <div class="yuga-card glass kali">
+        <div class="yuga-glyph">💀</div>
+        <h3>Kali Yuga</h3>
+        <p class="muted-sub">Wave 14 — the End</p>
+        <p>Kali arrives with 600,000 HP, 500 HP/s regen, and minion summons. Burn him with the Chakra before dharma falls.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── SCREENSHOTS ─────────── -->
+  <section id="screens">
+    <h2>Screens</h2>
+    <p class="section-lede">
+      Densely packed slot grids on iPhone, sweeping spirals on iPad and macOS.
+      Every tower has its own visual identity — the chakra, the trident, the
+      bow, the wish-tree.
+    </p>
+    <div class="screen-row">
+      <figure class="screen-card glass">
+        <img src="shot-iphone-raceselect.png" alt="iPhone — Choose Your Dynasty screen with 9 dynasty cards" />
+        <figcaption class="ph-label">iPhone &middot; Race select</figcaption>
+      </figure>
+      <figure class="screen-card glass">
+        <img src="shot-iphone-midwave.png" alt="iPhone — Wave 1 active, demons marching toward the Sudarshan relic" />
+        <figcaption class="ph-label">iPhone &middot; Wave 1 mid-fight</figcaption>
+      </figure>
+      <figure class="screen-card glass">
+        <img src="shot-ipad-kalifight.png" alt="iPad — Wave 14, Sudarshana Chakra ignited, Kali Yuga at the path edge" />
+        <figcaption class="ph-label">iPad &middot; Kali Yuga &middot; W14</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ─────────── HOW TO PLAY ─────────── -->
+  <section id="howto">
+    <h2>How a run unfolds</h2>
+    <div class="howto-row">
+      <div class="howto-step glass">
+        <span class="step-num">1</span>
+        <h3>Pick your dynasty</h3>
+        <p>Each lineage grants a permanent combat or economy bonus that shapes the whole run.</p>
+      </div>
+      <div class="howto-step glass">
+        <span class="step-num">2</span>
+        <h3>Place your astras</h3>
+        <p>Drop towers onto the spiral path. Add stones for timed boosts. Build resource buildings to feed the next upgrade.</p>
+      </div>
+      <div class="howto-step glass">
+        <span class="step-num">3</span>
+        <h3>End Kali</h3>
+        <p>Feed the Sudarshan, advance the Yugas, hold dharma. At Wave 14 the chakra wakes — and the dark age burns.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── REVERENCE ─────────── -->
+  <section id="reverence" class="reverence">
     <h2>Inspired with reverence</h2>
     <p>
-      Antya Yuga draws on the rich storytelling tradition of Indian itihāsa — the
-      Ramayana, Mahabharata and Puranas. Names and references are used with
-      respect for the source material. Nothing in this game is intended to make
-      light of any community's beliefs or cultural heritage.
+      Anta Yuga draws on the rich storytelling tradition of Indian itihāsa —
+      the Ramayana, Mahabharata and Puranas. Names of deities, asuras, astras
+      and ages are used with respect for the cultural and religious traditions
+      from which they originate. Nothing in this game is intended to make
+      light of any community's beliefs.
     </p>
+  </section>
+
+  <!-- ─────────── DOWNLOAD CTA ─────────── -->
+  <section id="download" class="download-cta glass">
+    <h2>Ready to wield the Chakra?</h2>
+    <p class="tagline">
+      Free to download. Optional Bazaar points. No accounts. No tracking. Just
+      thirty divine astras and one final showdown.
+    </p>
+    <div class="cta-row" style="margin-top: 18px;">
+      <a class="btn primary big" href="#">Download on the App Store</a>
+      <a class="btn big" href="support.html">Get support</a>
+    </div>
+    <p class="muted hero-meta">Requires iOS 26.5+ / iPadOS 26.5+ / macOS 26.5+</p>
   </section>
 
   <footer class="site">
-    <div>© <span id="year"></span> Antya Yuga · Made by Shirshendu Sasmal</div>
+    <div>© <span id="year"></span> Anta Yuga · EcoSanskriti Innovation</div>
     <nav>
       <a href="privacy.html">Privacy</a>
       <a href="terms.html">Terms</a>
@@ -88,6 +247,18 @@
     </nav>
   </footer>
 </div>
-<script>document.getElementById("year").textContent = new Date().getFullYear();</script>
+
+<script>
+  document.getElementById("year").textContent = new Date().getFullYear();
+
+  // Subtle parallax on hero icon as user scrolls
+  const heroIcon = document.querySelector('.hero-icon');
+  if (heroIcon) {
+    window.addEventListener('scroll', () => {
+      const y = window.scrollY;
+      heroIcon.style.transform = `translateY(${y * 0.08}px) rotate(${y * 0.02}deg)`;
+    }, { passive: true });
+  }
+</script>
 </body>
 </html>

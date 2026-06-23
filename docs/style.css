@@ -1,4 +1,4 @@
-/* Antya Yuga — site styles */
+/* Anta Yuga — site styles */
 :root {
   --bg-1: #0a0518;
   --bg-2: #15082a;
@@ -155,3 +155,312 @@ footer.site nav a:hover { color: var(--text); }
 .legal-doc h1 { font-size: 30px; }
 .legal-doc p, .legal-doc li { font-size: 14px; color: #c5bedb; }
 .legal-doc .meta { margin-bottom: 24px; color: var(--muted); font-size: 13px; }
+
+/* ════════════════════════════════════════════════════════════════
+   LANDING PAGE — glassmorphism + animated starfield re-skin
+   ════════════════════════════════════════════════════════════════ */
+
+body.landing {
+  background: #050111;
+  overflow-x: hidden;
+}
+
+.landing-container { max-width: 1140px; position: relative; z-index: 1; }
+
+/* ─── Starfield ─── */
+.starfield {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.stars {
+  position: absolute;
+  inset: -50%;
+  background-repeat: repeat;
+  opacity: 0.85;
+}
+.stars-1 {
+  background-image:
+    radial-gradient(1px 1px at 25% 10%, #fff 50%, transparent 100%),
+    radial-gradient(1px 1px at 65% 30%, #fff 50%, transparent 100%),
+    radial-gradient(1px 1px at 90% 75%, #fff 50%, transparent 100%),
+    radial-gradient(1px 1px at 12% 65%, #fff 50%, transparent 100%),
+    radial-gradient(1px 1px at 40% 88%, #fff 50%, transparent 100%);
+  background-size: 200px 200px;
+  animation: driftA 90s linear infinite;
+  opacity: 0.55;
+}
+.stars-2 {
+  background-image:
+    radial-gradient(1.5px 1.5px at 15% 20%, #ffd7a2 50%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 70% 60%, #c2acff 50%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 35% 80%, #fff 50%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 85% 25%, #ffe0c4 50%, transparent 100%);
+  background-size: 350px 350px;
+  animation: driftB 130s linear infinite;
+  opacity: 0.4;
+}
+.stars-3 {
+  background-image:
+    radial-gradient(2px 2px at 20% 45%, #ffb84d 60%, transparent 100%),
+    radial-gradient(2px 2px at 80% 12%, #b07cff 60%, transparent 100%);
+  background-size: 600px 600px;
+  animation: driftA 200s linear infinite;
+  opacity: 0.3;
+}
+@keyframes driftA {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-200px, -200px, 0); }
+}
+@keyframes driftB {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-350px, 175px, 0); }
+}
+
+/* Aurora glow */
+.aurora {
+  position: absolute;
+  top: -20%; left: 50%;
+  transform: translateX(-50%);
+  width: 1200px; height: 800px;
+  background:
+    radial-gradient(closest-side, rgba(176, 124, 255, 0.30), transparent 70%),
+    radial-gradient(closest-side at 30% 70%, rgba(255, 184, 77, 0.18), transparent 70%);
+  filter: blur(40px);
+  opacity: 0.7;
+}
+
+/* ─── Brand icon in header ─── */
+.brand-icon {
+  width: 36px; height: 36px;
+  border-radius: 9px;
+  box-shadow: 0 4px 18px rgba(255, 184, 77, 0.25);
+}
+
+/* ─── Hero re-skin ─── */
+.hero-landing {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 40px;
+  padding: 32px 0 56px;
+}
+.hero-text { flex: 1 1 460px; }
+.hero-art  { flex: 0 0 280px; position: relative; display: flex; justify-content: center; }
+
+.eyebrow {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+  background: rgba(255, 184, 77, 0.08);
+  border: 1px solid rgba(255, 184, 77, 0.25);
+  margin-bottom: 18px;
+}
+
+.hero-title {
+  font-size: 56px;
+  line-height: 1.05;
+  letter-spacing: -0.5px;
+  background: linear-gradient(180deg, #fff 35%, #c9aaff 80%, #b07cff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 18px;
+}
+@media (max-width: 760px) {
+  .hero-landing { flex-direction: column; text-align: center; }
+  .hero-text { flex: none; }
+  .hero-title { font-size: 40px; }
+  .hero-art { order: -1; flex: 0 0 220px; }
+  .cta-row { justify-content: center; }
+}
+
+.tagline { font-size: 19px; max-width: 540px; }
+.hero-meta { margin-top: 18px; }
+
+.hero-icon {
+  width: 260px; height: 260px;
+  border-radius: 56px;
+  box-shadow:
+    0 30px 60px rgba(0,0,0,0.45),
+    0 0 80px rgba(255, 184, 77, 0.25),
+    0 0 120px rgba(176, 124, 255, 0.18);
+  transition: transform 0.3s ease-out;
+}
+
+.icon-halo {
+  position: absolute;
+  width: 320px; height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 184, 77, 0.35), transparent 70%);
+  filter: blur(30px);
+  animation: pulse 4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50%      { transform: scale(1.15); opacity: 0.9; }
+}
+
+/* ─── CTA buttons ─── */
+.btn.big { padding: 14px 22px; font-size: 15px; }
+.btn.primary.big {
+  box-shadow: 0 8px 24px rgba(255, 122, 26, 0.35);
+}
+
+/* ─── Stat strip ─── */
+.stat-strip {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+  padding: 24px;
+  margin: 32px 0 48px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+  border: 1px solid var(--card-border);
+  border-radius: 22px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+@media (max-width: 720px) {
+  .stat-strip { grid-template-columns: repeat(3, 1fr); }
+}
+.stat { text-align: center; display: flex; flex-direction: column; gap: 4px; }
+.stat .num {
+  font-size: 28px; font-weight: 800;
+  background: linear-gradient(180deg, #fff, #ffd494);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.stat .lbl { font-size: 11px; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase; }
+
+/* ─── Section lede ─── */
+.section-lede {
+  font-size: 16px;
+  color: var(--muted);
+  max-width: 720px;
+  margin: 6px 0 24px;
+}
+
+/* ─── Glass card ─── */
+.glass {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 18px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.glass:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 184, 77, 0.40);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35), 0 0 24px rgba(255, 184, 77, 0.10);
+}
+.card.glass { padding: 22px; }
+.card-icon { font-size: 28px; margin-bottom: 10px; }
+.card.glass h3 { font-size: 17px; margin-bottom: 8px; }
+.card.glass p { font-size: 14px; }
+
+/* ─── Yugas row ─── */
+.yuga-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 8px;
+}
+.yuga-card {
+  padding: 22px;
+  text-align: center;
+}
+.yuga-glyph {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+.yuga-card h3 { font-size: 18px; margin-bottom: 4px; }
+.yuga-card .muted-sub { font-size: 12px; color: var(--accent); margin-bottom: 10px; letter-spacing: 0.5px; }
+.yuga-card p { font-size: 14px; margin: 0; }
+.yuga-card.kali {
+  background: linear-gradient(180deg, rgba(255, 60, 70, 0.10), rgba(255,255,255,0.02));
+  border-color: rgba(255, 60, 70, 0.35);
+}
+.yuga-card.kali .muted-sub { color: #ff7a7a; }
+
+/* ─── Screen showcase ─── */
+.screen-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+}
+figure.screen-card {
+  margin: 0;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+}
+figure.screen-card img {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  display: block;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  transition: transform 0.4s ease;
+}
+figure.screen-card:hover img { transform: scale(1.02); }
+.ph-label {
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/* ─── How-to-play steps ─── */
+.howto-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 8px;
+}
+.howto-step {
+  padding: 22px;
+  position: relative;
+}
+.step-num {
+  position: absolute;
+  top: 14px; right: 18px;
+  font-size: 44px; font-weight: 800;
+  color: rgba(255, 184, 77, 0.12);
+  line-height: 1;
+}
+.howto-step h3 { font-size: 17px; margin-bottom: 8px; }
+.howto-step p { font-size: 14px; margin: 0; }
+
+/* ─── Reverence ─── */
+.reverence {
+  margin-top: 48px;
+  padding: 24px;
+  border-left: 2px solid var(--accent);
+  background: linear-gradient(90deg, rgba(255,184,77,0.05), transparent);
+  border-radius: 0 14px 14px 0;
+}
+.reverence h2 { margin-top: 0; }
+.reverence p { font-size: 15px; }
+
+/* ─── Download CTA card ─── */
+.download-cta {
+  margin-top: 48px;
+  padding: 36px 28px;
+  text-align: center;
+  border-radius: 22px;
+}
+.download-cta h2 { margin: 0 0 8px; }
+.download-cta .cta-row { justify-content: center; }
+

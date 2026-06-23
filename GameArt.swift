@@ -8,29 +8,109 @@
 
 import SwiftUI
 
+extension View {
+    /// Wraps a view in `.drawingGroup()` only when Optimized graphics is
+    /// selected. Full mode skips rasterization so blends / shadows render
+    /// at native fidelity.
+    @ViewBuilder
+    func compositingGroupIfNeeded(isFull: Bool) -> some View {
+        if isFull {
+            self
+        } else {
+            self.drawingGroup()
+        }
+    }
+}
+
 // MARK: - Projectile Art (per damage type, scaled by tier)
 
 struct ProjectileArtView: View {
     let projectile: Projectile
+    @State private var pulse: Double = 0
 
     private var rotationDegrees: Double {
         atan2(Double(projectile.heading.y), Double(projectile.heading.x)) * 180 / .pi
     }
 
+    /// The three divine T3 ultimates render with extra halo + ring layers
+    /// — they're the dramatic "I am the wrath" projectiles, so a bigger,
+    /// more detailed shell makes them read instantly across the board.
+    private var isDivineUltimate: Bool {
+        let k = projectile.sourceKind
+        return k == .sudarshanaChakra || k == .brahmashirsha || k == .pashupatastra
+    }
+
     var body: some View {
+        let isFull = GraphicsSettings.shared.isFull
         ZStack {
-            // Bright trail behind the flying astra head
-            elementalTrail
-            // The astra head itself — same shape as the tower's head
+            // Divine ultimates get a layered halo + outer ring before the head
+            if isDivineUltimate {
+                divineHalo
+                divineRing
+            }
+            // Per-astra signature trail — each named astra renders its
+            // characteristic visual (Trishul = trident, Vajrastra =
+            // lightning fork, Sudarshana = spinning disc, etc.).
+            // Falls back to the generic elemental trail for fodder paths.
+            astraSignatureTrail
+            // The astra head itself — same shape as the tower's head.
+            // Spinning kinds (Sudarshana, Aindra chain, Vajrastra arc)
+            // get a permanent rotation overlay so the head reads as
+            // "live" rather than static while flying. Shadow strength
+            // tracks the graphics setting: Full = original glow on every
+            // projectile (5 base / 10 divine), Optimized = no shadow on
+            // fodder / 6 on divine ultimates.
+            let shadowRadius: CGFloat = isFull
+                ? (isDivineUltimate ? 10 : 5)
+                : (isDivineUltimate ? 6 : 0)
             AstraHeadView(tower: dummyTower)
                 .scaleEffect(scaleForProjectile)
-                .shadow(color: projectile.color, radius: 5)
+                .rotationEffect(.degrees(headSpinAngle))
+                .shadow(color: shadowRadius > 0 ? projectile.color : .clear,
+                        radius: shadowRadius)
         }
+        // Optimized mode rasterizes the whole projectile each frame so
+        // sub-view shading doesn't compound across many in-flight darts.
+        // Full mode skips drawingGroup so every blendMode + shadow renders
+        // at native fidelity.
+        .compositingGroupIfNeeded(isFull: isFull)
         // Rotate so the head's "tip" points toward the target.
         // Heads are drawn with their tip pointing UP (y negative), and the
         // projectile flies along +X to the target, so we rotate by
         // (heading angle) + 90° to turn the top toward the heading vector.
         .rotationEffect(.degrees(rotationDegrees + 90))
+        .onAppear {
+            // Divine ultimates always get the pulse loop; spinning astras
+            // run a faster loop too so the disc/chain twirls.
+            if isDivineUltimate {
+                withAnimation(.easeInOut(duration: 0.45).repeatForever(autoreverses: true)) {
+                    pulse = 1
+                }
+            } else if isSpinningAstra {
+                withAnimation(.linear(duration: 0.35).repeatForever(autoreverses: false)) {
+                    pulse = 1
+                }
+            }
+        }
+    }
+
+    /// Astras whose head should visibly spin while flying.
+    private var isSpinningAstra: Bool {
+        let k = projectile.sourceKind
+        return k == .sudarshanaChakra
+            || k == .aindrastra
+            || k == .shaktiAstra
+            || k == .vajrastra
+            || k == .nagaPasha
+            || k == .narayanaAstra
+            || k == .mohiniAstra
+    }
+
+    /// Continuous spin angle for the astra head — 0 by default. Pulse loops
+    /// 0..1 (via withAnimation), so multiplying by 360 gives a full turn.
+    private var headSpinAngle: Double {
+        guard isSpinningAstra else { return 0 }
+        return pulse * 360
     }
 
     /// A dummy tower used only to feed the source kind into AstraHeadView.
@@ -41,9 +121,261 @@ struct ProjectileArtView: View {
               tier: projectile.sourceTier)
     }
 
-    /// Projectile scale: T1≈1.5, T2≈1.9, T3≈2.3 — visible flying weapons
+    /// Projectile scale: T1≈1.5, T2≈1.9, T3≈2.3. Divine ultimates jump to
+    /// ~3.5 so the player sees the kill blow flying across the screen.
     private var scaleForProjectile: CGFloat {
-        1.5 + CGFloat(projectile.sourceTier - 1) * 0.4
+        if isDivineUltimate { return 3.5 + 0.3 * CGFloat(pulse) }
+        return 1.5 + CGFloat(projectile.sourceTier - 1) * 0.4
+    }
+
+    /// Pulsing radial bloom on the divine ultimates — sells the "incoming
+    /// apocalyptic hit" feeling as it flies toward the target.
+    @ViewBuilder
+    private var divineHalo: some View {
+        let base = Circle()
+            .fill(RadialGradient(
+                colors: [
+                    projectile.color.opacity(0.55 + 0.20 * pulse),
+                    projectile.color.opacity(0.25),
+                    .clear
+                ],
+                center: .center,
+                startRadius: 4,
+                endRadius: 30 + CGFloat(pulse) * 8))
+            .frame(width: 60, height: 60)
+        // Restore the bright `.plusLighter` compositing in Full graphics
+        // mode — drops back to the cheaper alpha blend in Optimized.
+        if GraphicsSettings.shared.isFull {
+            base.blendMode(.plusLighter)
+        } else {
+            base
+        }
+    }
+
+    /// Outer dashed counter-rotating ring — ties the projectile visually back
+    /// to the divine-ultimate tower head and gives it more on-screen weight.
+    private var divineRing: some View {
+        Circle()
+            .stroke(
+                projectile.color.opacity(0.75),
+                style: StrokeStyle(lineWidth: 1.6, dash: [5, 4]))
+            .frame(width: 42 + CGFloat(pulse) * 5,
+                   height: 42 + CGFloat(pulse) * 5)
+            .rotationEffect(.degrees(pulse * 360))
+    }
+
+    /// Per-astra signature trail. Each named astra renders its
+    /// characteristic visual; falls back to the elemental trail otherwise.
+    @ViewBuilder
+    private var astraSignatureTrail: some View {
+        let c = projectile.color
+        switch projectile.sourceKind {
+        // ─── Arrow path ─────────────────────────────────────────────
+        case .aindrastra:
+            // Indra's chain bow — zig-zag thunder arc trail
+            Path { p in
+                p.move(to: CGPoint(x: -22, y: 0))
+                p.addLine(to: CGPoint(x: -16, y: -3))
+                p.addLine(to: CGPoint(x: -11, y: 2))
+                p.addLine(to: CGPoint(x: -6, y: -2))
+                p.addLine(to: CGPoint(x: 0, y: 0))
+            }
+            .stroke(LinearGradient(colors: [c.opacity(0), .white, c],
+                                   startPoint: .leading, endPoint: .trailing),
+                    style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+            .shadow(color: c, radius: 5)
+        case .shaktiAstra:
+            // Karna's spear — straight spear tip with sparks
+            Path { p in
+                p.move(to: CGPoint(x: -24, y: 0))
+                p.addLine(to: CGPoint(x: 0, y: 0))
+            }
+            .stroke(LinearGradient(colors: [c.opacity(0), c, .white],
+                                   startPoint: .leading, endPoint: .trailing),
+                    style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
+            .shadow(color: c, radius: 6)
+            ForEach(0..<3, id: \.self) { i in
+                Circle()
+                    .fill(c)
+                    .frame(width: CGFloat(3 - i), height: CGFloat(3 - i))
+                    .offset(x: CGFloat(-8 - i * 6), y: CGFloat([2, -2, 1][i]))
+                    .shadow(color: c, radius: 2)
+            }
+        case .sudarshanaChakra:
+            // Vishnu's discus — spinning motion-blur arc
+            ForEach(0..<3, id: \.self) { i in
+                Circle()
+                    .stroke(c.opacity(0.7 - Double(i) * 0.2),
+                            style: StrokeStyle(lineWidth: 2, dash: [4, 3]))
+                    .frame(width: CGFloat(14 + i * 6), height: CGFloat(14 + i * 6))
+                    .rotationEffect(.degrees(pulse * 360 + Double(i) * 30))
+            }
+        case .dart:
+            // Simple shaft
+            Path { p in
+                p.move(to: CGPoint(x: -16, y: 0))
+                p.addLine(to: CGPoint(x: 0, y: 0))
+            }
+            .stroke(LinearGradient(colors: [c.opacity(0), c],
+                                   startPoint: .leading, endPoint: .trailing),
+                    style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
+
+        // ─── Fire path ──────────────────────────────────────────────
+        case .agneyastra, .suryastra, .rudraAstra:
+            // Flame comet tail — bigger / brighter at higher tier
+            let tailLen: CGFloat = projectile.sourceKind == .rudraAstra ? 24 : 18
+            Path { p in
+                p.move(to: CGPoint(x: -2, y: -3))
+                p.addQuadCurve(to: CGPoint(x: -tailLen, y: 0), control: CGPoint(x: -tailLen * 0.6, y: -7))
+                p.addQuadCurve(to: CGPoint(x: -2, y: 3), control: CGPoint(x: -tailLen * 0.6, y: 7))
+                p.closeSubpath()
+            }
+            .fill(LinearGradient(colors: [.red.opacity(0), .red.opacity(0.8), .orange, .yellow],
+                                 startPoint: .leading, endPoint: .trailing))
+            .shadow(color: .orange, radius: 5)
+        case .brahmashirsha:
+            // Apocalyptic inferno — multi-flame head + ember sparks
+            ForEach(0..<3, id: \.self) { i in
+                Path { p in
+                    p.move(to: CGPoint(x: -3, y: -4 + CGFloat(i) * 4))
+                    p.addQuadCurve(to: CGPoint(x: -20, y: -4 + CGFloat(i) * 4),
+                                   control: CGPoint(x: -12, y: -8 + CGFloat(i) * 4))
+                }
+                .stroke(LinearGradient(colors: [c.opacity(0), c, .white],
+                                       startPoint: .leading, endPoint: .trailing),
+                        style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+                .shadow(color: c, radius: 4)
+            }
+
+        // ─── Water path ─────────────────────────────────────────────
+        case .varunastra:
+            // Single water droplet trail with ripples
+            ForEach(0..<3, id: \.self) { i in
+                Ellipse()
+                    .stroke(Color.cyan.opacity(0.6 - Double(i) * 0.18), lineWidth: 1.2)
+                    .frame(width: CGFloat(6 + i * 4), height: CGFloat(3 + i * 2))
+                    .offset(x: CGFloat(-4 - i * 4))
+            }
+        case .nagaPasha:
+            // Serpent noose — wavy snake trail
+            Path { p in
+                p.move(to: CGPoint(x: -22, y: 0))
+                p.addCurve(to: CGPoint(x: 0, y: 0),
+                           control1: CGPoint(x: -15, y: -6),
+                           control2: CGPoint(x: -7, y: 6))
+            }
+            .stroke(LinearGradient(colors: [c.opacity(0), c, c.opacity(0.7)],
+                                   startPoint: .leading, endPoint: .trailing),
+                    style: StrokeStyle(lineWidth: 2.2, lineCap: .round))
+            .shadow(color: c, radius: 3)
+        case .garudastra:
+            // Garuda's wings — pair of swept-back arcs
+            ForEach([-1, 1], id: \.self) { sign in
+                Path { p in
+                    p.move(to: CGPoint(x: -3, y: 0))
+                    p.addQuadCurve(to: CGPoint(x: -16, y: CGFloat(sign) * 8),
+                                   control: CGPoint(x: -10, y: CGFloat(sign) * 2))
+                }
+                .stroke(c.opacity(0.85),
+                        style: StrokeStyle(lineWidth: 1.8, lineCap: .round))
+                .shadow(color: c, radius: 4)
+            }
+
+        // ─── Ice path ───────────────────────────────────────────────
+        case .sheetastra:
+            // Snowflake particles trail
+            ForEach(0..<4, id: \.self) { i in
+                Image(systemName: "snowflake")
+                    .font(.system(size: CGFloat(6 - i)))
+                    .foregroundColor(Color.cyan.opacity(0.7 - Double(i) * 0.15))
+                    .offset(x: CGFloat(-5 - i * 4), y: CGFloat([2, -2, 1, -1][i]))
+            }
+        case .twashtar:
+            // Triple-crystal frost trail
+            ForEach(0..<3, id: \.self) { i in
+                Path { p in
+                    p.move(to: CGPoint(x: CGFloat(-6 - i * 5), y: -3))
+                    p.addLine(to: CGPoint(x: CGFloat(-6 - i * 5) - 2, y: 0))
+                    p.addLine(to: CGPoint(x: CGFloat(-6 - i * 5), y: 3))
+                    p.closeSubpath()
+                }
+                .fill(Color.cyan.opacity(0.75 - Double(i) * 0.18))
+                .shadow(color: Color(red: 0.6, green: 0.85, blue: 1.0), radius: 2)
+            }
+        case .mohiniAstra:
+            // Enchanting vortex — swirling spiral arcs
+            ForEach(0..<3, id: \.self) { i in
+                Circle()
+                    .trim(from: 0.2, to: 0.8)
+                    .stroke(c.opacity(0.7 - Double(i) * 0.15),
+                            style: StrokeStyle(lineWidth: 1.4, lineCap: .round))
+                    .frame(width: CGFloat(10 + i * 4), height: CGFloat(10 + i * 4))
+                    .rotationEffect(.degrees(pulse * 360 + Double(i) * 60))
+            }
+
+        // ─── Divine path ────────────────────────────────────────────
+        case .trishul:
+            // Shiva's trident — 3 prongs at the tail
+            ForEach(-1...1, id: \.self) { sign in
+                Path { p in
+                    p.move(to: CGPoint(x: -22, y: CGFloat(sign) * 5))
+                    p.addLine(to: CGPoint(x: 0, y: 0))
+                }
+                .stroke(LinearGradient(colors: [c.opacity(0), .white, c],
+                                       startPoint: .leading, endPoint: .trailing),
+                        style: StrokeStyle(lineWidth: 1.8, lineCap: .round))
+                .shadow(color: c, radius: 4)
+            }
+        case .vajrastra:
+            // Indra's thunderbolt — Y-shaped lightning fork
+            Path { p in
+                // Center jagged line
+                p.move(to: CGPoint(x: -22, y: 0))
+                p.addLine(to: CGPoint(x: -16, y: -3))
+                p.addLine(to: CGPoint(x: -12, y: 2))
+                p.addLine(to: CGPoint(x: -6, y: -2))
+                p.addLine(to: CGPoint(x: 0, y: 0))
+                // Upper fork
+                p.move(to: CGPoint(x: -12, y: 2))
+                p.addLine(to: CGPoint(x: -8, y: -6))
+                // Lower fork
+                p.move(to: CGPoint(x: -6, y: -2))
+                p.addLine(to: CGPoint(x: -2, y: 6))
+            }
+            .stroke(LinearGradient(colors: [c.opacity(0), .white, c],
+                                   startPoint: .leading, endPoint: .trailing),
+                    style: StrokeStyle(lineWidth: 2, lineCap: .round))
+            .shadow(color: c, radius: 5)
+        case .narayanaAstra:
+            // Vishnu's arrow storm — 5 parallel arrow trails
+            ForEach(-2...2, id: \.self) { row in
+                Path { p in
+                    p.move(to: CGPoint(x: -20, y: CGFloat(row) * 3))
+                    p.addLine(to: CGPoint(x: 0, y: 0))
+                }
+                .stroke(LinearGradient(colors: [c.opacity(0), c],
+                                       startPoint: .leading, endPoint: .trailing),
+                        style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
+            }
+        case .pashupatastra:
+            // Shiva's wrath — divine third-eye beam with cosmic rays
+            ForEach(0..<6, id: \.self) { i in
+                Rectangle()
+                    .fill(LinearGradient(colors: [c.opacity(0), .white, c],
+                                         startPoint: .leading, endPoint: .trailing))
+                    .frame(width: 20, height: 1.5)
+                    .rotationEffect(.degrees(Double(i) * 30 - 75))
+                    .shadow(color: c, radius: 4)
+            }
+
+        // ─── Sensory path (Bala / Atibala / Divya Drishti) ──────────
+        case .bala, .atibala, .divyaDrishti:
+            EmptyView()       // sensory towers don't fire projectiles
+
+        // ─── Fallback for any other astra ───────────────────────────
+        default:
+            elementalTrail
+        }
     }
 
     /// Elemental trail behind the astra head, matching the damage type
@@ -111,30 +443,110 @@ struct ProjectileArtView: View {
 struct TowerFireFlash: View {
     let color: Color
     let damageType: DamageType
+    /// Tower tier — drives flash size, spike count, and ring intensity.
+    var tier: Int = 1
+    /// Which astra fired — drives the Sanskrit power-glyph overlay
+    /// (श्री on Sudarshana Chakra, भम्भ्र on Bhambhrastra, ॐ on
+    /// Pashupatastra). nil = no glyph overlay.
+    var sourceKind: TowerKind? = nil
     var progress: Double = 0  // 0..1 fade out
 
     var body: some View {
         let alpha = 1.0 - progress
+        let isFull = GraphicsSettings.shared.isFull
+        // Per-tier scale-up: T1 = 1.00×, T2 = 1.20×, T3 = 1.50×, T4 = 1.95×.
+        let tierScale: Double = [1.0, 1.0, 1.20, 1.50, 1.95][max(0, min(4, tier))]
+        // Full mode keeps the original heavier spike count (T1 = 8 …
+        // T4 = 20). Optimized halves it to save fill rate.
+        let spikes: Int = isFull
+            ? max(8, 4 + tier * 4)
+            : max(4, 2 + tier * 2)
         ZStack {
-            // Bright flash burst
-            Circle()
+            // Shockwave ring — only on T3/T4. Expands outward and fades.
+            if tier >= 3 {
+                let shock = Circle()
+                    .stroke(color.opacity(alpha * 0.8), lineWidth: 1.5)
+                    .frame(width: (40 + CGFloat(progress) * 60) * CGFloat(tierScale),
+                           height: (40 + CGFloat(progress) * 60) * CGFloat(tierScale))
+                if isFull {
+                    shock.blendMode(.plusLighter)
+                } else {
+                    shock
+                }
+            }
+            // Bright flash burst.
+            let burst = Circle()
                 .fill(RadialGradient(colors: [.white.opacity(alpha),
                                               color.opacity(alpha * 0.7),
                                               .clear],
                                      center: .center, startRadius: 2,
-                                     endRadius: 24 + CGFloat(progress) * 16))
-                .frame(width: 48 + CGFloat(progress) * 32,
-                       height: 48 + CGFloat(progress) * 32)
-                .blendMode(.plusLighter)
-            // Radial spike rays
-            ForEach(0..<8, id: \.self) { i in
+                                     endRadius: (24 + CGFloat(progress) * 16) * CGFloat(tierScale)))
+                .frame(width: (48 + CGFloat(progress) * 32) * CGFloat(tierScale),
+                       height: (48 + CGFloat(progress) * 32) * CGFloat(tierScale))
+            if isFull {
+                burst.blendMode(.plusLighter)
+            } else {
+                burst
+            }
+            // Radial spike rays — more spikes at higher tier.
+            let rays = ForEach(0..<spikes, id: \.self) { i in
                 Rectangle()
                     .fill(LinearGradient(colors: [color.opacity(alpha), .clear],
                                          startPoint: .center, endPoint: .top))
-                    .frame(width: 1.5, height: 18 + CGFloat(progress) * 8)
-                    .rotationEffect(.degrees(Double(i) * 45))
+                    .frame(width: 1.5,
+                           height: (18 + CGFloat(progress) * 8) * CGFloat(tierScale))
+                    .rotationEffect(.degrees(Double(i) * 360.0 / Double(spikes)))
             }
-            .blendMode(.plusLighter)
+            if isFull {
+                ZStack { rays }.blendMode(.plusLighter)
+            } else {
+                rays
+            }
+            // T4 — extra inner gold core flash.
+            if tier >= 4 {
+                let core = Circle()
+                    .fill(RadialGradient(colors: [Color.white.opacity(alpha),
+                                                  Color(red: 1.0, green: 0.85, blue: 0.25).opacity(alpha),
+                                                  .clear],
+                                         center: .center, startRadius: 1, endRadius: 14))
+                    .frame(width: 28, height: 28)
+                if isFull {
+                    core.blendMode(.plusLighter)
+                } else {
+                    core
+                }
+            }
+            // Sanskrit power-glyph overlay for select astras. Full mode
+            // restores the second shadow pass for a brighter halo.
+            if let glyph = sanskritGlyph(for: sourceKind) {
+                let text = Text(glyph)
+                    .font(.system(size: 22 * CGFloat(tierScale),
+                                  weight: .heavy, design: .serif))
+                    .foregroundColor(.white.opacity(alpha))
+                    .shadow(color: color.opacity(alpha),
+                            radius: isFull ? 6 : 4)
+                    .scaleEffect(1.0 + 0.35 * CGFloat(progress))
+                if isFull {
+                    text.shadow(color: .white.opacity(alpha * 0.6), radius: 2)
+                } else {
+                    text
+                }
+            }
+        }
+        // Optimized mode flattens the flash into one bitmap; Full mode
+        // keeps native compositing so every blend renders at full strength.
+        .compositingGroupIfNeeded(isFull: isFull)
+    }
+
+    /// Returns the Devanagari power-syllable rendered on this astra's fire
+    /// flash. Three astras have signature glyphs the player should learn
+    /// to recognise on-screen.
+    private func sanskritGlyph(for kind: TowerKind?) -> String? {
+        switch kind {
+        case .sudarshanaChakra: return "श्री"     // Shree — Vishnu's auspicious mark
+        case .brahmashirsha:    return "भम्भ्र"   // Bhambhra — Bhambhrastra's seed mantra
+        case .pashupatastra:    return "ॐ"        // Om — Shiva's primal sound
+        default:                return nil
         }
     }
 }
@@ -260,46 +672,495 @@ struct TempleGopuramShape: Shape {
 struct TowerArtView: View {
     let tower: Tower
     let selected: Bool
+    /// iPhone (compact) shrinks the entire tower visual to match the
+    /// tighter slot grid on small screens. iPad / Mac (regular) keep the
+    /// original 60×60 layout untouched.
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
         let ac = tower.kind.color
+        let isCompact = horizontalSizeClass == .compact
+        let frameSize: CGFloat = isCompact ? 36 : 60
+        let visualScale: CGFloat = isCompact ? 0.60 : 1.0
 
-        ZStack {
-            if selected {
-                Circle()
-                    .stroke(ac.opacity(0.6), lineWidth: 2)
-                    .frame(width: 60, height: 60)
-            }
+        // Drive continuous animations off a single timeline so every
+        // tower on screen shares cadence and the GPU doesn't thrash with
+        // separate withAnimation loops. Frame rate scales with the
+        // player's chosen graphics quality (30 fps full / 15 fps optimized).
+        let isFull = GraphicsSettings.shared.isFull
+        let timelineInterval: Double = isFull ? (1.0 / 30.0) : (1.0 / 15.0)
+        TimelineView(.animation(minimumInterval: timelineInterval, paused: false)) { ctx in
+            let now = ctx.date.timeIntervalSinceReferenceDate
+            let pulse = (sin(now * 1.4) + 1) * 0.5            // 0..1, slow breathe
+            let rotation = (now.truncatingRemainder(dividingBy: 6)) * 60.0 // continuous spin
+            // "Charged super shot" cadence — every ~4 seconds a brief
+            // flash builds and discharges, signalling a powered attack.
+            let chargePhase = (now.truncatingRemainder(dividingBy: 4)) / 4.0  // 0..1
+            let chargeFlash = max(0, chargePhase - 0.85) / 0.15               // 0..1 last 15%
 
-            // Unique per-astra art (changes completely per tier)
-            AstraTowerArt(tower: tower)
+            ZStack {
+                // Selection outline.
+                if selected {
+                    Circle()
+                        .stroke(ac.opacity(0.6), lineWidth: 2)
+                        .frame(width: 60, height: 60)
+                }
 
-            // Stone glow (if equipped)
-            if let stone = tower.stone {
-                Circle()
-                    .stroke(stone.kind.color.opacity(0.7),
-                            style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
-                    .frame(width: 56, height: 56)
-                    .shadow(color: stone.kind.color, radius: 3)
-                HStack(spacing: 1.5) {
-                    ForEach(0..<stone.level, id: \.self) { _ in
-                        Circle()
-                            .fill(stone.kind.color)
-                            .frame(width: 4, height: 4)
-                            .shadow(color: stone.kind.color, radius: 2)
+                // Tier 2+ — slow rotating outer glow ring. Subtle for T2,
+                // brighter dashed ring for T3, double-ring for T4. Heavy
+                // effects (.plusLighter blend, glow shadows) only render
+                // in FULL graphics mode.
+                if tower.tier >= 2 {
+                    let ring = Circle()
+                        .stroke(ac.opacity(0.4 + 0.15 * pulse),
+                                style: StrokeStyle(lineWidth: 1.0,
+                                                   dash: [4, 3]))
+                        .frame(width: 50, height: 50)
+                        .rotationEffect(.degrees(rotation))
+                    if isFull {
+                        ring.blendMode(.plusLighter)
+                    } else {
+                        ring
                     }
                 }
-                .offset(x: 22, y: -22)
-            }
+                if tower.tier >= 3 {
+                    let ring = Circle()
+                        .stroke(ac.opacity(0.55 + 0.20 * pulse),
+                                style: StrokeStyle(lineWidth: 1.4,
+                                                   dash: [6, 4]))
+                        .frame(width: 64, height: 64)
+                        .rotationEffect(.degrees(-rotation * 0.65))
+                    if isFull {
+                        ring
+                            .shadow(color: ac.opacity(0.5), radius: 3)
+                            .blendMode(.plusLighter)
+                    } else {
+                        ring
+                    }
+                }
+                if tower.tier >= 4 {
+                    // T4 — divine halo + 4 orbiting sparks.
+                    let halo = Circle()
+                        .stroke(ac.opacity(0.85),
+                                style: StrokeStyle(lineWidth: 1.6))
+                        .frame(width: 72, height: 72)
+                        .scaleEffect(1.0 + 0.04 * pulse)
+                    if isFull {
+                        halo
+                            .shadow(color: ac, radius: 6)
+                            .blendMode(.plusLighter)
+                    } else {
+                        halo
+                    }
+                    ForEach(0..<4, id: \.self) { i in
+                        let spark = Circle()
+                            .fill(ac)
+                            .frame(width: 4, height: 4)
+                            .offset(x: cos(rotation * .pi / 180 + Double(i) * .pi / 2) * 38,
+                                    y: sin(rotation * .pi / 180 + Double(i) * .pi / 2) * 38)
+                        if isFull {
+                            spark
+                                .shadow(color: ac, radius: 3)
+                                .blendMode(.plusLighter)
+                        } else {
+                            spark
+                        }
+                    }
+                }
 
-            // HP bar (only when damaged)
-            if tower.hp < tower.maxHP {
+                // Charged super-shot indicator — kept (cheap radial
+                // gradient, no shadow).
+                if tower.tier >= 2 {
+                    Circle()
+                        .fill(RadialGradient(colors: [
+                            ac.opacity(0.7 * chargeFlash * Double(tower.tier - 1)),
+                            ac.opacity(0)
+                        ], center: .center, startRadius: 0, endRadius: 36))
+                        .frame(width: 72, height: 72)
+                        .allowsHitTesting(false)
+                }
+
+                // Unique per-astra art (changes completely per tier).
+                AstraTowerArt(tower: tower)
+                    .scaleEffect(1.0 + 0.06 * chargeFlash * Double(tower.tier - 1))
+
+                // Per-astra idle animation — each named astra layers a
+                // signature visual on top of the base art so every tower
+                // reads as alive in its own way (Sudarshana spins, Agneya
+                // flickers, Naga coils, etc.).
+                astraIdleAnimation(now: now, pulse: pulse, rotation: rotation)
+                    .allowsHitTesting(false)
+
+                // Stone glow (if equipped) — orbit the level dots so it
+                // reads as "a stone is socketed in this tower". Shadow
+                // only in FULL graphics mode.
+                if let stone = tower.stone {
+                    let ring = Circle()
+                        .stroke(stone.kind.color.opacity(0.6 + 0.3 * pulse),
+                                style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
+                        .frame(width: 56, height: 56)
+                        .rotationEffect(.degrees(rotation * 0.5))
+                    if isFull {
+                        ring.shadow(color: stone.kind.color, radius: 3)
+                    } else {
+                        ring
+                    }
+                    HStack(spacing: 1.5) {
+                        ForEach(0..<stone.level, id: \.self) { _ in
+                            let dot = Circle()
+                                .fill(stone.kind.color)
+                                .frame(width: 4, height: 4)
+                            if isFull {
+                                dot.shadow(color: stone.kind.color, radius: 2)
+                            } else {
+                                dot
+                            }
+                        }
+                    }
+                    .offset(x: 22, y: -22)
+                }
+
+                // (Tier badge removed — the player can already read tier
+                // from the surrounding rings: T2 single dashed ring, T3
+                // double-ring, T4 halo + orbit sparks. No need for the
+                // Roman-numeral chip cluttering each tower.)
+
+                // HP bar — ALWAYS visible above the tower so the player
+                // can read each defender's health at a glance, not just
+                // the wounded ones.
                 hpBar
                     .frame(width: 36, height: 3)
                     .offset(y: -32)
             }
+            // Render the tower content at its native size, then scale the
+            // whole thing down on iPhone so the tower frame matches the
+            // tighter slot grid (42 px vs 60 px). iPad / Mac unchanged.
+            .scaleEffect(visualScale)
+            .frame(width: frameSize, height: frameSize)
+            // (No drawingGroup here — it was clipping the HP bar, tier
+            // badge, and stone dots that offset outside the 60×60 frame.
+            // The 15 fps cadence + lighter materials below give us most
+            // of the performance win without losing detail.)
         }
-        .frame(width: 60, height: 60)
+    }
+
+    /// Per-astra idle animation layered on top of the base AstraTowerArt.
+    /// Each named astra renders its own signature motion (spin, flicker,
+    /// ripple, coil, gleam) so every tower on the field reads as unique.
+    @ViewBuilder
+    private func astraIdleAnimation(now: TimeInterval, pulse: Double, rotation: Double) -> some View {
+        let c = tower.kind.color
+        switch tower.kind {
+
+        // ─── Arrow path ─────────────────────────────────────────────
+        case .dart:
+            // Simple aiming reticle — tiny gold crosshair spinning slowly
+            ForEach(0..<4, id: \.self) { i in
+                Rectangle()
+                    .fill(c.opacity(0.45))
+                    .frame(width: 1, height: 5)
+                    .offset(y: -12)
+                    .rotationEffect(.degrees(Double(i) * 90 + rotation * 0.3))
+            }
+        case .aindrastra:
+            // Indra's lightning crackle — random thunder arc
+            Path { p in
+                let phase = sin(now * 8)
+                p.move(to: CGPoint(x: -10, y: -12))
+                p.addLine(to: CGPoint(x: CGFloat(-4 + phase * 3), y: -6))
+                p.addLine(to: CGPoint(x: CGFloat(6 - phase * 2), y: -2))
+                p.addLine(to: CGPoint(x: 10, y: 8))
+            }
+            .stroke(c.opacity(0.6 + 0.3 * abs(sin(now * 8))),
+                    style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+            .shadow(color: c, radius: 3)
+            .blendMode(.plusLighter)
+        case .shaktiAstra:
+            // Karna's spear gleam — diagonal light streak
+            Capsule()
+                .fill(LinearGradient(colors: [c.opacity(0), .white, c.opacity(0)],
+                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+                .frame(width: 24, height: 2)
+                .rotationEffect(.degrees(-45 + sin(now * 1.2) * 5))
+                .offset(y: -2)
+                .opacity(0.5 + 0.4 * pulse)
+                .blendMode(.plusLighter)
+        case .sudarshanaChakra:
+            // Vishnu's discus — fast continuous spin overlay
+            ForEach(0..<6, id: \.self) { i in
+                Rectangle()
+                    .fill(c.opacity(0.45))
+                    .frame(width: 14, height: 1.5)
+                    .rotationEffect(.degrees(Double(i) * 30 + now * 480))
+            }
+            .blendMode(.plusLighter)
+            Circle()
+                .stroke(c.opacity(0.5), style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
+                .frame(width: 22, height: 22)
+                .rotationEffect(.degrees(now * -160))
+                .blendMode(.plusLighter)
+
+        // ─── Fire path ──────────────────────────────────────────────
+        case .agneyastra:
+            // Agni's flame flicker — wobble + vertical shimmer
+            ForEach(0..<3, id: \.self) { i in
+                Image(systemName: "flame.fill")
+                    .font(.system(size: CGFloat(6 - i)))
+                    .foregroundColor(Color.orange.opacity(0.75 - Double(i) * 0.2))
+                    .offset(x: sin(now * 6 + Double(i)) * 2,
+                            y: CGFloat(-9 - i * 3) + sin(now * 4 + Double(i)) * 1.5)
+                    .blendMode(.plusLighter)
+            }
+        case .suryastra:
+            // Surya's radiant rays — sun rays pulsing outward
+            ForEach(0..<8, id: \.self) { i in
+                Rectangle()
+                    .fill(LinearGradient(colors: [c.opacity(0), c.opacity(0.6 + 0.3 * pulse)],
+                                         startPoint: .center, endPoint: .top))
+                    .frame(width: 1.2, height: CGFloat(8 + 3 * pulse))
+                    .offset(y: -14)
+                    .rotationEffect(.degrees(Double(i) * 45 + rotation * 0.2))
+                    .blendMode(.plusLighter)
+            }
+        case .rudraAstra:
+            // Rudra's wrath flame — pulsing ember halo
+            Circle()
+                .fill(RadialGradient(colors: [.red.opacity(0.6 + 0.3 * pulse), .clear],
+                                     center: .center, startRadius: 0, endRadius: 18))
+                .frame(width: 36, height: 36)
+                .blendMode(.plusLighter)
+            ForEach(0..<5, id: \.self) { i in
+                Circle()
+                    .fill(Color.orange.opacity(0.7))
+                    .frame(width: 2, height: 2)
+                    .offset(x: cos(now * 2 + Double(i) * 1.25) * 14,
+                            y: sin(now * 2 + Double(i) * 1.25) * 14)
+                    .blendMode(.plusLighter)
+            }
+        case .brahmashirsha:
+            // Brahmastra inferno — multi-headed dark fire crown
+            ForEach(0..<5, id: \.self) { i in
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 6 + CGFloat(pulse) * 2))
+                    .foregroundColor(c.opacity(0.85))
+                    .shadow(color: c, radius: 3)
+                    .offset(x: cos(Double(i) * .pi / 2.5 - .pi / 2) * 16,
+                            y: sin(Double(i) * .pi / 2.5 - .pi / 2) * 16)
+                    .blendMode(.plusLighter)
+            }
+
+        // ─── Water path ─────────────────────────────────────────────
+        case .varunastra:
+            // Varuna's ripple — expanding rings
+            ForEach(0..<2, id: \.self) { i in
+                let phase = (now + Double(i) * 0.6).truncatingRemainder(dividingBy: 1.2) / 1.2
+                Circle()
+                    .stroke(Color.cyan.opacity(0.7 * (1 - phase)), lineWidth: 1.2)
+                    .frame(width: 12 + 18 * CGFloat(phase), height: 12 + 18 * CGFloat(phase))
+                    .blendMode(.plusLighter)
+            }
+        case .nagaPasha:
+            // Naga Pasha — coiling serpent line
+            Path { p in
+                let amp = 6.0 * (0.6 + 0.4 * sin(now * 2))
+                p.move(to: CGPoint(x: -14, y: 0))
+                for i in 0..<28 {
+                    let t = Double(i) / 27.0
+                    let x = -14 + 28 * t
+                    let y = sin(t * .pi * 3 + now * 4) * amp
+                    p.addLine(to: CGPoint(x: x, y: y))
+                }
+            }
+            .stroke(c.opacity(0.75), style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
+            .shadow(color: c, radius: 3)
+            .blendMode(.plusLighter)
+        case .garudastra:
+            // Garuda's wings — wing flap motion
+            ForEach([-1, 1], id: \.self) { sign in
+                Path { p in
+                    let flap = 4 + sin(now * 4) * 3
+                    p.move(to: CGPoint(x: 0, y: -2))
+                    p.addQuadCurve(to: CGPoint(x: CGFloat(sign) * 16, y: -CGFloat(flap)),
+                                   control: CGPoint(x: CGFloat(sign) * 10, y: -CGFloat(flap) * 0.5))
+                }
+                .stroke(c.opacity(0.6), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+                .shadow(color: c, radius: 2)
+                .blendMode(.plusLighter)
+            }
+
+        // ─── Ice path ───────────────────────────────────────────────
+        case .sheetastra:
+            // Sheetastra — crystal sparkle
+            ForEach(0..<4, id: \.self) { i in
+                Image(systemName: "snowflake")
+                    .font(.system(size: CGFloat(4 + (i % 2) * 2)))
+                    .foregroundColor(Color.cyan.opacity(0.6 + 0.3 * abs(sin(now * 2 + Double(i)))))
+                    .offset(x: cos(Double(i) * .pi / 2 + now * 0.7) * 12,
+                            y: sin(Double(i) * .pi / 2 + now * 0.7) * 12)
+                    .blendMode(.plusLighter)
+            }
+        case .twashtar:
+            // Twashtar — triple crystal floating
+            ForEach(0..<3, id: \.self) { i in
+                Image(systemName: "diamond.fill")
+                    .font(.system(size: 5))
+                    .foregroundColor(Color(red: 0.6, green: 0.85, blue: 1.0).opacity(0.85))
+                    .offset(x: cos(Double(i) * .pi * 2 / 3 + now * 1.2) * 13,
+                            y: sin(Double(i) * .pi * 2 / 3 + now * 1.2) * 13 - 2)
+                    .shadow(color: .cyan, radius: 2)
+                    .blendMode(.plusLighter)
+            }
+        case .mohiniAstra:
+            // Mohini enchantment — vortex swirls
+            ForEach(0..<3, id: \.self) { i in
+                Circle()
+                    .trim(from: 0.2, to: 0.8)
+                    .stroke(c.opacity(0.55), style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
+                    .frame(width: CGFloat(14 + i * 5), height: CGFloat(14 + i * 5))
+                    .rotationEffect(.degrees(now * 80 + Double(i) * 60))
+                    .blendMode(.plusLighter)
+            }
+
+        // ─── Divine path ────────────────────────────────────────────
+        case .trishul:
+            // Shiva's trident — golden gleam pulse at the prong tips
+            ForEach([-1.0, 0.0, 1.0], id: \.self) { off in
+                Circle()
+                    .fill(c.opacity(0.6 + 0.4 * pulse))
+                    .frame(width: 3, height: 3)
+                    .offset(x: CGFloat(off) * 5, y: -14)
+                    .shadow(color: c, radius: 3)
+                    .blendMode(.plusLighter)
+            }
+        case .vajrastra:
+            // Vajra — sporadic thunderbolt arc + flickering glow
+            Path { p in
+                p.move(to: CGPoint(x: -8, y: -10))
+                p.addLine(to: CGPoint(x: -3, y: -4))
+                p.addLine(to: CGPoint(x: 4, y: -6))
+                p.addLine(to: CGPoint(x: 8, y: 4))
+            }
+            .stroke(.white.opacity(0.4 + 0.5 * abs(sin(now * 12))),
+                    style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
+            .shadow(color: c, radius: 3)
+            .blendMode(.plusLighter)
+        case .narayanaAstra:
+            // Narayanastra — orbiting arrow ghosts
+            ForEach(0..<5, id: \.self) { i in
+                Capsule()
+                    .fill(c.opacity(0.55))
+                    .frame(width: 6, height: 1.4)
+                    .offset(x: cos(Double(i) * .pi * 2 / 5 + now * 1.5) * 14,
+                            y: sin(Double(i) * .pi * 2 / 5 + now * 1.5) * 14)
+                    .rotationEffect(.degrees(Double(i) * 72 + now * 80))
+                    .blendMode(.plusLighter)
+            }
+        case .pashupatastra:
+            // Pashupatastra — divine third-eye watching
+            Circle()
+                .fill(c.opacity(0.6 + 0.4 * pulse))
+                .frame(width: 6, height: 6)
+                .overlay(Circle().stroke(.white.opacity(0.85), lineWidth: 1))
+                .shadow(color: c, radius: 6)
+                .offset(y: -2)
+                .scaleEffect(1.0 + 0.3 * pulse)
+                .blendMode(.plusLighter)
+
+        // ─── Sensory path ───────────────────────────────────────────
+        case .bala, .atibala, .divyaDrishti:
+            // Sensory eyes — slow blink + scanning glint
+            Circle()
+                .fill(c.opacity(0.5 + 0.4 * (sin(now * 1.5) * 0.5 + 0.5)))
+                .frame(width: 4, height: 4)
+                .offset(y: -2)
+                .blendMode(.plusLighter)
+
+        // ─── Healer path ────────────────────────────────────────────
+        case .aushadhi, .sanjivaniBooti, .amritKalash:
+            // Healer halo — soft green pulse + drifting plus signs
+            Circle()
+                .fill(c.opacity(0.25 + 0.15 * pulse))
+                .frame(width: 32, height: 32)
+                .blendMode(.plusLighter)
+            ForEach(0..<3, id: \.self) { i in
+                let phase = (now + Double(i) * 0.4).truncatingRemainder(dividingBy: 1.6) / 1.6
+                Image(systemName: "plus")
+                    .font(.system(size: 6, weight: .heavy))
+                    .foregroundColor(c.opacity(1 - phase))
+                    .offset(y: -CGFloat(phase) * 16)
+            }
+
+        // ─── Barrier path ───────────────────────────────────────────
+        case .surakshaRekha, .lakshmanRekha, .vajraKavach:
+            // Barrier shimmer — rotating hexagonal aura
+            ForEach(0..<6, id: \.self) { i in
+                Rectangle()
+                    .fill(c.opacity(0.5))
+                    .frame(width: 2, height: 8)
+                    .offset(y: -10)
+                    .rotationEffect(.degrees(Double(i) * 60 + rotation * 0.4))
+                    .blendMode(.plusLighter)
+            }
+
+        // ─── Maya path (illusion / divine arrows) ───────────────────
+        case .mayaAstra:
+            // Maya — shimmering afterimage ghosts that fade in/out
+            ForEach(0..<4, id: \.self) { i in
+                Circle()
+                    .stroke(c.opacity(0.4 * abs(sin(now * 1.5 + Double(i) * 0.6))),
+                            lineWidth: 1)
+                    .frame(width: CGFloat(10 + i * 5), height: CGFloat(10 + i * 5))
+                    .blendMode(.plusLighter)
+            }
+        case .gangaAstra:
+            // Ganga — flowing river ripple streams
+            ForEach(0..<2, id: \.self) { i in
+                Path { p in
+                    let yc = CGFloat(-6 + i * 12)
+                    let amp = 4.0 + sin(now * 2) * 1.5
+                    p.move(to: CGPoint(x: -14, y: yc))
+                    for j in 0..<24 {
+                        let t = Double(j) / 23.0
+                        let x = -14 + 28 * t
+                        let y = yc + sin(t * .pi * 4 + now * 3) * amp
+                        p.addLine(to: CGPoint(x: x, y: y))
+                    }
+                }
+                .stroke(Color.cyan.opacity(0.55), style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
+                .blendMode(.plusLighter)
+            }
+        case .anjalikaAstra:
+            // Anjalika — radiating spear tips around the tower
+            ForEach(0..<6, id: \.self) { i in
+                Capsule()
+                    .fill(c.opacity(0.6 + 0.3 * pulse))
+                    .frame(width: 8, height: 1.6)
+                    .offset(x: 14)
+                    .rotationEffect(.degrees(Double(i) * 60 + rotation * 0.5))
+                    .blendMode(.plusLighter)
+            }
+        case .brahmasiraAstra:
+            // Brahmasira (Maya T4) — divine apocalyptic crown
+            ForEach(0..<6, id: \.self) { i in
+                Image(systemName: "star.fill")
+                    .font(.system(size: 5 + CGFloat(pulse) * 2))
+                    .foregroundColor(c.opacity(0.85))
+                    .shadow(color: c, radius: 3)
+                    .offset(x: cos(Double(i) * .pi / 3 + now * 0.6) * 16,
+                            y: sin(Double(i) * .pi / 3 + now * 0.6) * 16)
+                    .blendMode(.plusLighter)
+            }
+        }
+    }
+
+    private var romanTier: String {
+        switch tower.tier {
+        case 1: return "I"
+        case 2: return "II"
+        case 3: return "III"
+        case 4: return "IV"
+        default: return ""
+        }
     }
 
     private var hpBar: some View {
@@ -313,7 +1174,6 @@ struct TowerArtView: View {
             }
         }
     }
-
 }
 
 // MARK: - Eye/Sensory Tower Shape
@@ -432,6 +1292,23 @@ struct GurukulShape: Shape {
     }
 }
 
+/// Parijata Briksha — the divine wish-tree. A leafy three-lobed crown sits
+/// atop a slender trunk, distinguishing it from the boxy production buildings.
+struct ParijataShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let w = rect.width
+        let h = rect.height
+        // Trunk
+        p.addRect(CGRect(x: w * 0.44, y: h * 0.55, width: w * 0.12, height: h * 0.40))
+        // Three-lobed canopy
+        p.addEllipse(in: CGRect(x: w * 0.10, y: h * 0.18, width: w * 0.50, height: h * 0.50))
+        p.addEllipse(in: CGRect(x: w * 0.40, y: h * 0.18, width: w * 0.50, height: h * 0.50))
+        p.addEllipse(in: CGRect(x: w * 0.25, y: h * 0.05, width: w * 0.50, height: h * 0.50))
+        return p
+    }
+}
+
 // MARK: - Building Art View
 
 struct BuildingArtView: View {
@@ -487,6 +1364,7 @@ struct BuildingArtView: View {
         case .techLab:            return AnyShape(TechLabShape())
         case .jotishaObservatory: return AnyShape(ObservatoryShape())
         case .vedaGurukul:        return AnyShape(GurukulShape())
+        case .parijata:           return AnyShape(ParijataShape())
         }
     }
 
@@ -589,6 +1467,13 @@ struct BuildingArtView: View {
                 .font(.system(size: 9))
                 .foregroundColor(Color.white.opacity(0.85))
                 .offset(y: 6)
+        case .parijata:
+            // Glowing golden bloom — the wish-tree's signature
+            Image(systemName: "sparkles")
+                .font(.system(size: 11))
+                .foregroundColor(.yellow)
+                .shadow(color: .yellow.opacity(0.8), radius: 3)
+                .offset(y: -6)
         }
     }
 }
@@ -627,6 +1512,7 @@ struct EnemyArtView: View {
         case .yantraPishacha: ResourceBearerArt(size: size, color: color, badge: "cpu.fill", badgeColor: .cyan)
         case .taraDevi:       ResourceBearerArt(size: size, color: color, badge: "moon.stars.fill", badgeColor: .purple)
         case .rishiAtma:      ResourceBearerArt(size: size, color: color, badge: "book.closed.fill", badgeColor: .orange)
+        case .maniMurta:      ResourceBearerArt(size: size, color: color, badge: "diamond.fill",    badgeColor: Color(red: 0.95, green: 0.55, blue: 0.85))
         case .raktabija:      SpecialistEnemyArt(size: size, color: color, badge: "drop.fill",                badgeColor: .red,    halo: true)
         case .tarakasura:     SpecialistEnemyArt(size: size, color: color, badge: "shield.lefthalf.filled",  badgeColor: Color(red: 0.95, green: 0.50, blue: 0.10), halo: false)
         case .bhasmasura:     SpecialistEnemyArt(size: size, color: color, badge: "flame.fill",              badgeColor: .orange, halo: true)

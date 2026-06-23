@@ -296,10 +296,12 @@ struct AstraHeadView: View {
         switch tower.kind {
         case .dart:              DartHead()
         case .aindrastra:        AindraHead()
+        case .shaktiAstra:       AindraHead()
         case .sudarshanaChakra:  SudarshanaHead()
         case .agneyastra:        FlameHead(small: false)
         case .suryastra:         SunDiscHead()
-        case .brahmashirsha:     SkullHead()
+        case .rudraAstra:        FlameHead(small: false)
+        case .brahmashirsha:     FlameHead(small: false)   // T4 "divine inferno" — Bhambhrastra
         case .varunastra:        DropletHead()
         case .nagaPasha:         CobraHead()
         case .garudastra:        EagleHead()
@@ -308,7 +310,12 @@ struct AstraHeadView: View {
         case .mohiniAstra:       VortexHead()
         case .trishul:           TridentHead()
         case .vajrastra:         VajraHeadShape()
-        case .pashupatastra:     DivineEyeHead()
+        case .narayanaAstra:     VajraHeadShape()
+        case .pashupatastra:     OmHead()                  // Shiva's weapon — ॐ is his primal mantra
+        case .mayaAstra:         AindraHead()
+        case .gangaAstra:        DropletHead()
+        case .anjalikaAstra:     DartHead()
+        case .brahmasiraAstra:   DivineEyeHead()
         case .bala:              EyeHead()
         case .atibala:           DualEyeHead()
         case .divyaDrishti:      CosmicEyeHead()
@@ -400,11 +407,13 @@ private struct StaffWithHead_Legacy: View {
         // Arrow
         case .dart:              DartHead()
         case .aindrastra:        AindraHead()
+        case .shaktiAstra:       AindraHead()
         case .sudarshanaChakra:  SudarshanaHead()
         // Fire
         case .agneyastra:        FlameHead(small: false)
         case .suryastra:         SunDiscHead()
-        case .brahmashirsha:     SkullHead()
+        case .rudraAstra:        FlameHead(small: false)
+        case .brahmashirsha:     FlameHead(small: false)
         // Water
         case .varunastra:        DropletHead()
         case .nagaPasha:         CobraHead()
@@ -416,7 +425,13 @@ private struct StaffWithHead_Legacy: View {
         // Divine
         case .trishul:           TridentHead()
         case .vajrastra:         VajraHeadShape()
-        case .pashupatastra:     DivineEyeHead()
+        case .narayanaAstra:     VajraHeadShape()
+        case .pashupatastra:     OmHead()
+        // Maya
+        case .mayaAstra:         AindraHead()
+        case .gangaAstra:        DropletHead()
+        case .anjalikaAstra:     DartHead()
+        case .brahmasiraAstra:   DivineEyeHead()
         // Sensory
         case .bala:              EyeHead()
         case .atibala:           DualEyeHead()
@@ -563,10 +578,14 @@ struct SunDiscHead: View {
     }
 }
 
-struct SkullHead: View {
+/// Renders the sacred ॐ (Om) glyph inside a flame aura — used for the
+/// Brahmashirsha T4 ultimate. Replaces the older skull head with a more
+/// auspicious Sanskrit symbol that matches the astra's divine theme.
+struct OmHead: View {
     var body: some View {
         ZStack {
-            // Flame backdrop
+            // Flame backdrop — same five-petal corona as before so the
+            // tower still reads "fire ultimate" at a glance.
             ForEach(0..<5, id: \.self) { i in
                 Path { p in
                     p.move(to: CGPoint(x: -1.5, y: 2))
@@ -580,25 +599,22 @@ struct SkullHead: View {
                                      startPoint: .bottom, endPoint: .top))
                 .rotationEffect(.degrees(Double(i - 2) * 20))
             }
-            // Skull
-            Ellipse()
-                .fill(LinearGradient(colors: [.white, Color(red: 0.85, green: 0.85, blue: 0.8)],
-                                     startPoint: .top, endPoint: .bottom))
-                .frame(width: 11, height: 11)
-                .shadow(color: .black.opacity(0.5), radius: 1.5)
-            // Eyes
-            HStack(spacing: 2.5) {
-                Circle().fill(Color.black).frame(width: 2.5, height: 3)
-                Circle().fill(Color.black).frame(width: 2.5, height: 3)
-            }
-            .offset(y: -1)
-            // Teeth
-            HStack(spacing: 0.6) {
-                ForEach(0..<4, id: \.self) { _ in
-                    Rectangle().fill(Color.black).frame(width: 0.8, height: 2.5)
-                }
-            }
-            .offset(y: 4)
+            // Inner gold disc behind the glyph — gives the Om a halo.
+            Circle()
+                .fill(RadialGradient(colors: [Color(red: 1.0, green: 0.95, blue: 0.55),
+                                              Color(red: 0.85, green: 0.55, blue: 0.10),
+                                              Color.clear],
+                                     center: .center, startRadius: 1, endRadius: 8))
+                .frame(width: 14, height: 14)
+                .blendMode(.plusLighter)
+            // Sacred Om glyph (ॐ) — the centerpiece. Rendered in a heavy
+            // serif weight so it's legible at the tower's small scale.
+            Text("ॐ")
+                .font(.system(size: 14, weight: .heavy, design: .serif))
+                .foregroundColor(Color(red: 1.0, green: 0.95, blue: 0.30))
+                .shadow(color: Color(red: 1.0, green: 0.55, blue: 0.0), radius: 2)
+                .shadow(color: .red.opacity(0.6), radius: 1)
+                .offset(y: -1)
         }
     }
 }
