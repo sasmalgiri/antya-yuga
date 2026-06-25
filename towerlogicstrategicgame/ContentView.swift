@@ -9,6 +9,11 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var vm = GameViewModel()
+    // First-launch acknowledgement of the cultural / mythological framing.
+    // Stored in UserDefaults so the disclaimer appears exactly once per
+    // device. Resetting requires reinstalling the app — same as Apple does
+    // for the privacy / tracking prompts.
+    @AppStorage("hasSeenCulturalDisclaimer") private var hasSeenCulturalDisclaimer = false
 
     var body: some View {
         GeometryReader { geo in
@@ -22,6 +27,14 @@ struct ContentView: View {
                 if vm.race == nil {
                     RaceSelectionView(vm: vm)
                         .transition(.opacity)
+                }
+
+                if !hasSeenCulturalDisclaimer {
+                    CulturalDisclaimerOverlay {
+                        hasSeenCulturalDisclaimer = true
+                    }
+                    .transition(.opacity)
+                    .zIndex(2000)
                 }
             }
             .task { await runGameLoop() }
@@ -4204,6 +4217,101 @@ enum CostAnnouncer {
 
 /// Comprehensive in-game help — explains every game element with tips.
 /// Organised into sections so the player can scroll to what they need.
+/// Shown ONCE on the very first app launch (gated by `hasSeenCulturalDisclaimer`
+/// in UserDefaults). Acknowledges that the game draws on Indian itihāsa with
+/// reverence — pre-empts cultural-sensitivity concerns. Must be tapped to
+/// dismiss; the player explicitly closes it before reaching the game.
+struct CulturalDisclaimerOverlay: View {
+    var onAcknowledge: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.92)
+                .ignoresSafeArea()
+
+            VStack(spacing: 18) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [
+                                    Color(red: 1.0, green: 0.78, blue: 0.20).opacity(0.50),
+                                    Color(red: 0.70, green: 0.20, blue: 0.55).opacity(0.20),
+                                    .clear
+                                ],
+                                center: .center, startRadius: 4, endRadius: 50
+                            )
+                        )
+                        .frame(width: 92, height: 92)
+                    Text("ॐ")
+                        .font(.system(size: 56, weight: .heavy, design: .serif))
+                        .foregroundColor(.yellow.opacity(0.95))
+                        .shadow(color: .orange, radius: 6)
+                }
+                .accessibilityHidden(true)
+
+                Text("Inspired with reverence")
+                    .font(.system(size: 22, weight: .heavy, design: .rounded))
+                    .foregroundColor(.white)
+
+                Text("""
+Anta Yuga draws on the storytelling tradition of Indian itihāsa — the Ramayana, the Mahabharata, and the Puranas. The names of deities, asuras, astras, ages, and dynasties are used with respect for the cultural and religious traditions from which they originate.
+
+Nothing in this game is intended to make light of any community's beliefs.
+""")
+                    .font(.system(size: 14, weight: .regular, design: .rounded))
+                    .foregroundColor(.white.opacity(0.85))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 8)
+                    .lineSpacing(3)
+
+                Button(action: onAcknowledge) {
+                    Text("I understand")
+                        .font(.system(size: 15, weight: .heavy, design: .rounded))
+                        .foregroundColor(.black)
+                        .padding(.horizontal, 28)
+                        .padding(.vertical, 12)
+                        .background(
+                            Capsule().fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color(red: 1.00, green: 0.85, blue: 0.40),
+                                        Color(red: 1.00, green: 0.55, blue: 0.10)
+                                    ],
+                                    startPoint: .top, endPoint: .bottom
+                                )
+                            )
+                        )
+                        .shadow(color: .orange.opacity(0.4), radius: 8)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 4)
+            }
+            .padding(28)
+            .frame(maxWidth: 460)
+            .background(
+                RoundedRectangle(cornerRadius: 22)
+                    .fill(Color(red: 0.08, green: 0.04, blue: 0.18))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [
+                                        Color(red: 1.00, green: 0.85, blue: 0.40).opacity(0.5),
+                                        Color(red: 0.70, green: 0.20, blue: 0.55).opacity(0.4)
+                                    ],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1
+                            )
+                    )
+            )
+            .shadow(color: .black.opacity(0.6), radius: 30)
+            .padding(.horizontal, 24)
+        }
+    }
+}
+
 struct HelpOverlay: View {
     @Binding var presented: Bool
 
@@ -4718,6 +4826,23 @@ struct HelpOverlay: View {
                             • Heal aura on every tower — passive HP regen during fights.
                             • Lakshman Rekha (Shield L4) on chokepoint towers — 70% damage reduction.
                             • Wall on bossfest waves — 5,000 HP shield per tower lasts 10-28s.
+                            """)
+
+                        helpSection(
+                            icon: "hands.sparkles.fill", tint: .yellow,
+                            title: "Reverence",
+                            body: """
+                            Anta Yuga is a work of interactive fiction inspired by Indian itihāsa — the Ramayana, the Mahabharata, and the Puranas. The names of deities, asuras, astras, ages, and dynasties used throughout the game are drawn from public-domain source material that has belonged to a living tradition for thousands of years.
+
+                            We use them with respect:
+                            • The astras (Sudarshana, Pashupatastra, Brahmasira, Bhambhrastra, and others) appear as the divine weapons they are in the source texts — wielded against asuras to protect dharma.
+                            • The asuras (Mahishasura, Ravana, Indrajit, Vritra, Bhasmasura, Putana, Kali Yuga) are depicted as the antagonists they are in the itihāsa, not as caricatures.
+                            • The Yugas (Satya, Treta, Dvapara, Kali) are used as the cosmic ages they name in scripture — markers of the cycle of time.
+                            • The दुर्गा-Strike combination attack invokes the Goddess by name to call her protection over the moment dharma is in greatest danger — Wave 14, the End Age. We mean it as homage, not as decoration.
+
+                            If you feel any element of this game has misrepresented the tradition, write to sasmalgiri@gmail.com — we will listen, and where you are right, we will revise. Nothing here is intended to make light of any community's beliefs.
+
+                            — EcoSanskriti Innovation
                             """)
                     }
                     .padding(14)
@@ -5745,7 +5870,7 @@ struct TrimurtiStrikeIndicator: View {
                             .foregroundColor(.yellow)
                     }
                 }
-                Text(firing ? "Three powers convergence — दुर्गा strikes Kali Yuga!"
+                Text(firing ? "Three powers convergence — Trimurti strikes Kali Yuga!"
                             : "Auto-fires the moment cooldown clears")
                     .font(.system(size: 8, weight: .heavy, design: .rounded))
                     .foregroundColor(.white.opacity(0.85))
