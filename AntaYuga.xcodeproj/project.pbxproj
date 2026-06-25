@@ -22,7 +22,7 @@
 		B4683D6E2FCB6F35001DD3D8 /* BazaarStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BazaarStore.swift; sourceTree = "<group>"; };
 		B4683D702FCB9048001DD3D8 /* StoreManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreManager.swift; sourceTree = "<group>"; };
 		B4683F4B2FCCA11C001DD3D8 /* HapticsEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticsEngine.swift; sourceTree = "<group>"; };
-		B473566D2FC2DD8D0041FC4F /* towerlogicstrategicgame.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = towerlogicstrategicgame.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B473566D2FC2DD8D0041FC4F /* AntaYuga.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AntaYuga.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B473567D2FC2E22C0041FC4F /* GameViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameViewModel.swift; sourceTree = "<group>"; };
 		B473567F2FC36D930041FC4F /* SoundEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundEngine.swift; sourceTree = "<group>"; };
 		B47356812FC36ECA0041FC4F /* GameArt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameArt.swift; sourceTree = "<group>"; };
@@ -32,9 +32,9 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		B473566F2FC2DD8D0041FC4F /* towerlogicstrategicgame */ = {
+		B473566F2FC2DD8D0041FC4F /* AntaYuga */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = towerlogicstrategicgame;
+			path = AntaYuga;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -53,7 +53,7 @@
 		B47356642FC2DD8D0041FC4F = {
 			isa = PBXGroup;
 			children = (
-				B473566F2FC2DD8D0041FC4F /* towerlogicstrategicgame */,
+				B473566F2FC2DD8D0041FC4F /* AntaYuga */,
 				B473566E2FC2DD8D0041FC4F /* Products */,
 				B473567D2FC2E22C0041FC4F /* GameViewModel.swift */,
 				B473567F2FC36D930041FC4F /* SoundEngine.swift */,
@@ -70,7 +70,7 @@
 		B473566E2FC2DD8D0041FC4F /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				B473566D2FC2DD8D0041FC4F /* towerlogicstrategicgame.app */,
+				B473566D2FC2DD8D0041FC4F /* AntaYuga.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -78,9 +78,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		B473566C2FC2DD8D0041FC4F /* towerlogicstrategicgame */ = {
+		B473566C2FC2DD8D0041FC4F /* AntaYuga */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = B473567A2FC2DD8F0041FC4F /* Build configuration list for PBXNativeTarget "towerlogicstrategicgame" */;
+			buildConfigurationList = B473567A2FC2DD8F0041FC4F /* Build configuration list for PBXNativeTarget "AntaYuga" */;
 			buildPhases = (
 				B47356692FC2DD8D0041FC4F /* Sources */,
 				B473566A2FC2DD8D0041FC4F /* Frameworks */,
@@ -91,13 +91,13 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				B473566F2FC2DD8D0041FC4F /* towerlogicstrategicgame */,
+				B473566F2FC2DD8D0041FC4F /* AntaYuga */,
 			);
-			name = towerlogicstrategicgame;
+			name = AntaYuga;
 			packageProductDependencies = (
 			);
-			productName = towerlogicstrategicgame;
-			productReference = B473566D2FC2DD8D0041FC4F /* towerlogicstrategicgame.app */;
+			productName = AntaYuga;
+			productReference = B473566D2FC2DD8D0041FC4F /* AntaYuga.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -115,7 +115,7 @@
 					};
 				};
 			};
-			buildConfigurationList = B47356682FC2DD8D0041FC4F /* Build configuration list for PBXProject "towerlogicstrategicgame" */;
+			buildConfigurationList = B47356682FC2DD8D0041FC4F /* Build configuration list for PBXProject "AntaYuga" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -129,7 +129,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				B473566C2FC2DD8D0041FC4F /* towerlogicstrategicgame */,
+				B473566C2FC2DD8D0041FC4F /* AntaYuga */,
 			);
 		};
 /* End PBXProject section */
@@ -379,7 +379,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		B47356682FC2DD8D0041FC4F /* Build configuration list for PBXProject "towerlogicstrategicgame" */ = {
+		B47356682FC2DD8D0041FC4F /* Build configuration list for PBXProject "AntaYuga" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				B47356782FC2DD8F0041FC4F /* Debug */,
@@ -388,7 +388,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		B473567A2FC2DD8F0041FC4F /* Build configuration list for PBXNativeTarget "towerlogicstrategicgame" */ = {
+		B473567A2FC2DD8F0041FC4F /* Build configuration list for PBXNativeTarget "AntaYuga" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				B473567B2FC2DD8F0041FC4F /* Debug */,

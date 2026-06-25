@@ -1,6 +1,6 @@
 //
 //  AppIconView.swift
-//  towerlogicstrategicgame
+//  AntaYuga
 //
 //  Pure SwiftUI app icon at 1024×1024. NOT shipped at runtime — this file
 //  exists so you can render the icon in Xcode Canvas, screenshot at full

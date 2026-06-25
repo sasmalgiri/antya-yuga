@@ -1,6 +1,6 @@
 //
 //  StoreManager.swift
-//  towerlogicstrategicgame
+//  AntaYuga
 //
 //  StoreKit 2 wrapper for the three consumable Bazaar Point packs.
 //

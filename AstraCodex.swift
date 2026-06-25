@@ -1,6 +1,6 @@
 //
 //  AstraCodex.swift
-//  towerlogicstrategicgame
+//  AntaYuga
 //
 //  Sanskrit lore data + the cinematic codex overlay view that shows
 //  AAA artwork for each astra. When a Player long-presses or taps the

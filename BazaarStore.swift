@@ -1,6 +1,6 @@
 //
 //  BazaarStore.swift
-//  towerlogicstrategicgame
+//  AntaYuga
 //
 //  Bazaar points are PER-RUN (live on GameViewModel.points) — earned from
 //  enemy kills and wave clears, and wiped on every reset. Nothing carries

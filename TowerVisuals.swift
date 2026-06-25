@@ -1,6 +1,6 @@
 //
 //  TowerVisuals.swift
-//  towerlogicstrategicgame
+//  AntaYuga
 //
 //  Unified staff-and-head design: every tower is a vertical wooden
 //  staff with a red grip wrap and a SMALL astra-specific element at

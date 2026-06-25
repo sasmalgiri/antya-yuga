@@ -1,6 +1,6 @@
 //
 //  GameViewModel.swift
-//  towerlogicstrategicgame
+//  AntaYuga
 //
 //  Tower defence with Indian dynasties, multi-resource economy,
 //  resource-generating buildings, and astra evolution paths.

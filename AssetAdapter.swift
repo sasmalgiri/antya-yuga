@@ -1,6 +1,6 @@
 //
 //  AssetAdapter.swift
-//  towerlogicstrategicgame
+//  AntaYuga
 //
 //  Drop-in image-asset support. When you add a PNG/PDF image to
 //  Assets.xcassets with one of the naming conventions below, the game

@@ -32,19 +32,19 @@ A SwiftUI tower-defence game for iOS / iPadOS, inspired by Indian itihāsa
 
 ## Building
 
-Open `towerlogicstrategicgame.xcodeproj` in Xcode 16+ and run on an iOS 17+
+Open `AntaYuga.xcodeproj` in Xcode 16+ and run on an iOS 17+
 device or simulator.
 
 ## Project layout
 
 | Path | What |
 |---|---|
-| `towerlogicstrategicgame/towerlogicstrategicgame/` | App bundle (entry point, ContentView, Assets, PrivacyInfo) |
-| `towerlogicstrategicgame/GameViewModel.swift` | Single `@Observable` model |
-| `towerlogicstrategicgame/GameArt.swift`, `TowerVisuals.swift` | Vector SwiftUI art |
-| `towerlogicstrategicgame/BazaarStore.swift`, `StoreManager.swift` | Bazaar economy + StoreKit 2 |
-| `towerlogicstrategicgame/SoundEngine.swift` | AVAudioEngine synth |
-| `towerlogicstrategicgame/AstraCodex.swift` | Cinematic codex overlay |
+| `towerlogicstrategicgame/AntaYuga/` | App bundle (entry point, ContentView, Assets, PrivacyInfo) |
+| `AntaYuga/GameViewModel.swift` | Single `@Observable` model |
+| `AntaYuga/GameArt.swift`, `TowerVisuals.swift` | Vector SwiftUI art |
+| `AntaYuga/BazaarStore.swift`, `StoreManager.swift` | Bazaar economy + StoreKit 2 |
+| `AntaYuga/SoundEngine.swift` | AVAudioEngine synth |
+| `AntaYuga/AstraCodex.swift` | Cinematic codex overlay |
 | `docs/` | Landing page, privacy policy, terms, support (GitHub Pages source) |
 
 ## Privacy

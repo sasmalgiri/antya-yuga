@@ -1,6 +1,6 @@
 //
 //  SoundEngine.swift
-//  towerlogicstrategicgame
+//  AntaYuga
 //
 //  Procedurally synthesized tones for towers, hits, deaths, etc., plus
 //  AVSpeechSynthesizer-driven Sanskrit slokas for major game events

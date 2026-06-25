@@ -1,6 +1,6 @@
 //
 //  HapticsEngine.swift
-//  towerlogicstrategicgame
+//  AntaYuga
 //
 //  Thin wrapper around UIImpactFeedbackGenerator / UINotificationFeedbackGenerator
 //  with throttling so rapid-fire events (tower shots) don't drain the haptic

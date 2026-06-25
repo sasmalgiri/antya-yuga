@@ -1,6 +1,6 @@
 //
 //  GameArt.swift
-//  towerlogicstrategicgame
+//  AntaYuga
 //
 //  Custom Shape silhouettes for towers, buildings, and enemies.
 //  Each entity gets a visually-distinct outline matching its name.
